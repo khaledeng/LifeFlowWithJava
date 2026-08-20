@@ -1,0 +1,6 @@
+{
+  "name": "LifeFlow",
+  "description": "Minimalist native Android productivity and real-life activity time tracker.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,296 @@
+package com.example.ui.settings;
+
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.Fragment;
+
+import com.example.R;
+import com.example.data.TrackingRepository;
+import com.example.databinding.FragmentSettingsBinding;
+import com.example.service.TrackingService;
+import com.example.util.SubscriptionManager;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+/**
+ * SettingsFragment provides controls for notifications, membership tier, JSON backup & restore, and local data reset.
+ */
+public class SettingsFragment extends Fragment {
+
+    private FragmentSettingsBinding binding;
+    private SubscriptionManager subscriptionManager;
+    private TrackingRepository repository;
+    private String pendingExportJson = null;
+
+    private final ActivityResultLauncher<String> createDocumentLauncher =
+            registerForActivityResult(new ActivityResultContracts.CreateDocument("application/json"), uri -> {
+                if (uri != null && pendingExportJson != null) {
+                    writeJsonToUri(uri, pendingExportJson);
+                }
+            });
+
+    private final ActivityResultLauncher<String> importFileLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    readJsonFromUri(uri);
+                }
+            });
+
+    private final ActivityResultLauncher<String[]> openDocumentLauncher =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) {
+                    readJsonFromUri(uri);
+                }
+            });
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        binding = FragmentSettingsBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        subscriptionManager = new SubscriptionManager(requireContext());
+        repository = TrackingRepository.getInstance(requireContext());
+
+        updateMembershipUI();
+        updateNotificationSwitchUI();
+        updateLanguageUI();
+        setupListeners();
+    }
+
+    private void updateLanguageUI() {
+        if (binding.tvCurrentLanguage != null) {
+            boolean isArabic = com.example.util.LanguageManager.isArabic(requireContext());
+            binding.tvCurrentLanguage.setText(isArabic ? "En" : "Ar");
+        }
+    }
+
+    private void toggleLanguage() {
+        boolean isArabic = com.example.util.LanguageManager.isArabic(requireContext());
+        String newLang = isArabic ? com.example.util.LanguageManager.LANG_ENGLISH : com.example.util.LanguageManager.LANG_ARABIC;
+        com.example.util.LanguageManager.setLanguage(requireContext(), newLang);
+    }
+
+    private void updateMembershipUI() {
+        if (subscriptionManager.isPro()) {
+            binding.tvMembershipStatus.setText(R.string.pro_tier_status);
+            binding.btnTogglePro.setText(R.string.downgrade_free_tier);
+            binding.btnTogglePro.setBackgroundColor(requireContext().getColor(R.color.secondary));
+        } else {
+            binding.tvMembershipStatus.setText(R.string.free_tier_status);
+            binding.btnTogglePro.setText(R.string.upgrade_pro_button);
+            binding.btnTogglePro.setBackgroundColor(requireContext().getColor(R.color.primary));
+        }
+    }
+
+    private void updateNotificationSwitchUI() {
+        binding.switchNotifications.setChecked(subscriptionManager.isNotificationsEnabled());
+        binding.switchMotivationalNotifications.setChecked(subscriptionManager.isMotivationalNotificationsEnabled());
+    }
+
+    private void setupListeners() {
+        binding.btnMenu.setOnClickListener(v -> {
+            if (getActivity() instanceof com.example.MainActivity) {
+                ((com.example.MainActivity) getActivity()).showBurgerMenu();
+            }
+        });
+
+        binding.btnTogglePro.setOnClickListener(v -> {
+            boolean current = subscriptionManager.isPro();
+            subscriptionManager.setPro(!current);
+            updateMembershipUI();
+            String msg = !current ? getString(R.string.pro_unlocked_toast) : getString(R.string.switched_free_tier_toast);
+            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+        });
+
+        binding.switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            subscriptionManager.setNotificationsEnabled(isChecked);
+            if (!isChecked) {
+                TrackingService.stopTracking(requireContext());
+            }
+        });
+
+        binding.switchMotivationalNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            subscriptionManager.setMotivationalNotificationsEnabled(isChecked);
+        });
+
+        binding.cardLanguage.setOnClickListener(v -> toggleLanguage());
+
+        // Export JSON Backup
+        binding.btnExportJson.setOnClickListener(v -> handleExportJson());
+
+        // Import JSON File: Opens phone file picker directly
+        binding.btnImportJson.setOnClickListener(v -> {
+            try {
+                importFileLauncher.launch("*/*");
+            } catch (Exception e1) {
+                try {
+                    openDocumentLauncher.launch(new String[]{"*/*", "application/json", "text/plain"});
+                } catch (Exception e2) {
+                    Toast.makeText(requireContext(), getString(R.string.cannot_open_file_picker, e2.getMessage()), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        binding.btnClearData.setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.clear_data_button)
+                    .setMessage(R.string.clear_data_confirm)
+                    .setPositiveButton(R.string.reset_everything_button, (dialog, which) -> {
+                        repository.resetAllData(() -> {
+                            requireActivity().runOnUiThread(() -> {
+                                Toast.makeText(requireContext(), R.string.data_cleared_toast, Toast.LENGTH_SHORT).show();
+                            });
+                        });
+                    })
+                    .setNegativeButton(R.string.cancel_button, null)
+                    .show();
+        });
+    }
+
+    // --- EXPORT JSON ---
+
+    private void handleExportJson() {
+        repository.exportDataToJson((json, error) -> {
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                if (error != null || json == null) {
+                    Toast.makeText(requireContext(), getString(R.string.export_failed_toast, error != null ? error.getMessage() : "Unknown"), Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                pendingExportJson = json;
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US);
+                String fileName = "lifeflow_backup_" + sdf.format(new Date()) + ".json";
+
+                try {
+                    createDocumentLauncher.launch(fileName);
+                } catch (Exception e) {
+                    // Fallback to direct share intent if storage creator is unavailable
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("application/json");
+                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "LifeFlow Backup JSON");
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, json);
+                    startActivity(Intent.createChooser(shareIntent, getString(R.string.save_or_share_backup)));
+                }
+            });
+        });
+    }
+
+    private void writeJsonToUri(Uri uri, String json) {
+        try (OutputStream outputStream = requireContext().getContentResolver().openOutputStream(uri)) {
+            if (outputStream != null) {
+                outputStream.write(json.getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
+                Toast.makeText(requireContext(), R.string.export_success_toast, Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), getString(R.string.export_failed_toast, e.getMessage()), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    // --- IMPORT JSON ---
+
+    private void readJsonFromUri(Uri uri) {
+        try (InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append('\n');
+            }
+            showImportConfirmDialog(sb.toString());
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, e.getMessage()), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void showImportConfirmDialog(String jsonString) {
+        try {
+            JSONObject root = new JSONObject(jsonString);
+            JSONArray activities = root.optJSONArray("activities");
+            JSONArray sessions = root.optJSONArray("sessions");
+
+            int actCount = activities != null ? activities.length() : 0;
+            int sessCount = sessions != null ? sessions.length() : 0;
+
+            String dateInfo = root.optString("exportedDate", getString(R.string.backup_unknown_date));
+            String actStr = getResources().getQuantityString(R.plurals.plural_activities, actCount, actCount);
+            String sessStr = getResources().getQuantityString(R.plurals.plural_sessions, sessCount, sessCount);
+            String message = getString(R.string.backup_meta_prompt, dateInfo, actStr, sessStr);
+
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.import_dialog_title)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.import_merge_btn, (dialog, which) -> {
+                        executeImport(jsonString, false);
+                    })
+                    .setNeutralButton(R.string.import_replace_btn, (dialog, which) -> {
+                        new AlertDialog.Builder(requireContext())
+                                .setTitle(R.string.confirm_full_replacement_title)
+                                .setMessage(R.string.confirm_full_replacement_msg)
+                                .setPositiveButton(R.string.proceed_replace_button, (d2, w2) -> executeImport(jsonString, true))
+                                .setNegativeButton(R.string.cancel_button, null)
+                                .show();
+                    })
+                    .setNegativeButton(R.string.cancel_button, null)
+                    .show();
+
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, "Invalid JSON structure: " + e.getMessage()), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void executeImport(String jsonString, boolean replaceExisting) {
+        repository.importDataFromJson(jsonString, replaceExisting, (actCount, sessCount, error) -> {
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                if (error != null) {
+                    Toast.makeText(requireContext(), getString(R.string.import_failed_toast, error), Toast.LENGTH_LONG).show();
+                } else {
+                    String actStr = getResources().getQuantityString(R.plurals.plural_activities, actCount, actCount);
+                    String sessStr = getResources().getQuantityString(R.plurals.plural_sessions, sessCount, sessCount);
+                    Toast.makeText(requireContext(), getString(R.string.import_success_template, actStr, sessStr), Toast.LENGTH_LONG).show();
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
+    }
+}
+

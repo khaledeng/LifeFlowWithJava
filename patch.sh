@@ -1,0 +1,1 @@
+sed -i 's/float\[\] hours = new float\[numSlots\];/float\[\] hours = new float\[numSlots\]; for (int i=0; i<numSlots; i++) if (slotStarts\[i\] > now) hours\[i\] = -1f; /g' app/src/main/java/com/example/data/TrackingRepository.java

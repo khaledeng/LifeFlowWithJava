@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="6dp"
+    android:background="@drawable/bg_rounded_card"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="14dp">
+
+    <!-- Activity Icon Container -->
+    <FrameLayout
+        android:id="@+id/stat_icon_bg"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_rounded_card">
+
+        <ImageView
+            android:id="@+id/iv_stat_icon"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_work"
+            android:contentDescription="@string/nav_activities" />
+    </FrameLayout>
+
+    <!-- Activity Name & Emoji -->
+    <TextView
+        android:id="@+id/tv_stat_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="Work 💸"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textDirection="locale"
+        android:textAlignment="viewStart" />
+
+    <!-- Duration -->
+    <TextView
+        android:id="@+id/tv_stat_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="4dp"
+        android:text="44h 42m"
+        android:textColor="#C0C0C5"
+        android:textSize="15sp" />
+
+    <!-- Percentage -->
+    <TextView
+        android:id="@+id/tv_stat_percentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="6.0%"
+        android:textColor="@color/primary"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

@@ -1,0 +1,234 @@
+<resources>
+    <string name="app_name">LifeFlow</string>
+    <string name="app_tagline">Mindful Life Activity Tracker</string>
+
+    <!-- Navigation Labels -->
+    <string name="nav_home">Tracker</string>
+    <string name="nav_stats">Statistics</string>
+    <string name="nav_history">History</string>
+    <string name="nav_activities">Activities</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard Strings -->
+    <string name="today_title">Today</string>
+    <string name="tracked_header">TRACKED</string>
+    <string name="greeting_morning">Good Morning</string>
+    <string name="greeting_afternoon">Good Afternoon</string>
+    <string name="greeting_evening">Good Evening</string>
+    <string name="greeting_night">Good Night</string>
+    <string name="today_overview">Today Overview</string>
+    <string name="tracked_time_label">Tracked Time</string>
+    <string name="untracked_time_label">Untracked Time</string>
+    <string name="current_activity_header">CURRENT ACTIVITY</string>
+    <string name="no_active_activity">No active activity</string>
+    <string name="no_active_activity_hint">Tap any activity below to start tracking</string>
+    <string name="stop_tracking_button">Stop Tracking</string>
+    <string name="btn_start_action">Start</string>
+    <string name="btn_stop_action">Stop</string>
+    <string name="activities_section_header">Activities</string>
+    <string name="quick_start_hint">Tap to start or switch</string>
+    <string name="active_badge">ACTIVE</string>
+
+    <!-- Activity Management Strings -->
+    <string name="activities_subtitle">Manage categories and customize colors &amp; icons</string>
+    <string name="add_activity">+ Add Activity</string>
+    <string name="edit_activity">Edit Activity</string>
+    <string name="delete_activity">Delete Activity</string>
+    <string name="activity_name_label">Activity Name</string>
+    <string name="activity_name_hint">e.g. Study, Reading, Yoga</string>
+    <string name="activity_color_label">Choose Color</string>
+    <string name="activity_icon_label">Choose Icon</string>
+    <string name="save_button">Save</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="delete_confirm_title">Delete Activity?</string>
+    <string name="delete_confirm_message">Deleting this activity will stop any ongoing session and preserve its history.</string>
+
+    <!-- Statistics Strings -->
+    <string name="stats_title">Statistics</string>
+    <string name="stats_history_header">HISTORY</string>
+    <string name="stats_breakdown_header">BREAKDOWN</string>
+    <string name="tap_to_edit_hint">tap to edit</string>
+    <string name="swipe_chart_hint">Swipe chart or tap arrows to navigate</string>
+    <string name="tab_day">Day</string>
+    <string name="tab_yesterday">Yesterday</string>
+    <string name="tab_week">Week</string>
+    <string name="tab_month">Month</string>
+    <string name="tab_year">Year</string>
+    <string name="metric_total_label">Total</string>
+    <string name="total_tracked">Total Tracked</string>
+    <string name="tracked_vs_untracked">Tracked vs Untracked</string>
+    <string name="activity_breakdown">Activity Breakdown</string>
+    <string name="no_stats_data">No activity logged for this period</string>
+
+    <!-- History Strings -->
+    <string name="history_title">Activity History</string>
+    <string name="no_history_yet">No sessions recorded yet</string>
+    <string name="no_history_hint">Start tracking your activities on the Home screen</string>
+    <string name="session_in_progress">In Progress…</string>
+    <string name="delete_session">Delete Session</string>
+
+    <!-- Settings Strings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Preferences, Membership &amp; Storage</string>
+    <string name="membership_tier_title">LifeFlow Membership</string>
+    <string name="free_tier_status">Free Plan (Up to 3 Activities)</string>
+    <string name="pro_tier_status">Pro Plan (Unlocked)</string>
+    <string name="upgrade_pro_button">Upgrade to Pro</string>
+    <string name="language_option_title">App Language</string>
+    <string name="language_option_desc">Choose application display language</string>
+    <string name="lang_system_default">System Default</string>
+    <string name="lang_arabic">العربية (Arabic)</string>
+    <string name="lang_english">English</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="persistent_notification_desc">Keep active tracking status visible in notification shade</string>
+    <string name="data_management_title">Data &amp; Backup</string>
+    <string name="clear_data_button">Clear All Data</string>
+    <string name="about_title">About LifeFlow</string>
+    <string name="version_info">Version 1.0.0 (Native Java + Room)</string>
+
+    <!-- Notification Strings -->
+    <string name="notification_channel_id">lifeflow_tracking_channel</string>
+    <string name="notification_channel_name">Activity Tracking</string>
+    <string name="notification_channel_desc">Shows ongoing real-life activity tracking</string>
+    <string name="notification_currently_tracking">Currently tracking</string>
+    <string name="notification_action_stop">Stop</string>
+    <string name="notification_subtitle_goal">%1$s - \u200E%2$.1f%% of goal</string>
+    <string name="notification_subtitle_day">%1$s - \u200E%2$.1f%% of day</string>
+    <string name="notification_permission_required">Notification permission is required to display live tracking status in the background.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="free_tier_limit_reached">Free Plan Limit Reached</string>
+    <string name="free_tier_limit_message">The Free Plan allows up to 3 custom activities. Upgrade to Pro for unlimited activities!</string>
+    <string name="pro_unlocked_toast">Pro Tier unlocked! Unlimited activities enabled.</string>
+    <string name="activity_name_empty_error">Activity name cannot be empty</string>
+    <string name="delete_activity_confirm">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="clear_data_confirm">This will delete all activity logs and custom categories and restore defaults. This action cannot be undone.</string>
+    <string name="data_cleared_toast">All data has been reset to defaults.</string>
+
+    <!-- Edit Time Strings -->
+    <string name="edit_tracked_time_title">Edit Tracked Time</string>
+    <string name="edit_time_hours_hint">Hours</string>
+    <string name="edit_time_minutes_hint">Minutes</string>
+    <string name="current_time_prefix">Current time: %1$s</string>
+    <string name="time_adjusted_toast">Tracked time updated successfully.</string>
+    <string name="max_limit_info">Maximum limit: %1$s</string>
+    <string name="max_day_limit_exceeded">Time cannot exceed 24 hours in a single day.</string>
+    <string name="max_period_limit_exceeded">Time cannot exceed the period maximum (%1$s).</string>
+
+    <!-- Export & Import JSON Strings -->
+    <string name="backup_section_title">JSON Backup &amp; Restore</string>
+    <string name="backup_section_desc">Export your activities and history as a JSON file or import a backup.</string>
+    <string name="btn_export_json">Export JSON Backup</string>
+    <string name="btn_import_json">Import JSON File</string>
+    <string name="btn_paste_json">Paste JSON Text</string>
+    <string name="export_success_toast">Backup created successfully.</string>
+    <string name="export_failed_toast">Failed to export backup: %1$s</string>
+    <string name="import_success_toast">Successfully imported %1$s activities and %2$d sessions!</string>
+    <string name="import_failed_toast">Failed to import JSON: %1$s</string>
+    <string name="import_dialog_title">Import JSON Backup</string>
+    <string name="import_mode_prompt">Choose how to restore this backup (%1$s activities, %2$d sessions):</string>
+    <string name="import_merge_btn">Merge with Existing Data</string>
+    <string name="import_replace_btn">Replace Everything</string>
+
+    <!-- Goal Type & Target Strings -->
+    <string name="goal_type_label">Goal type</string>
+    <string name="goal_increase">Increase</string>
+    <string name="goal_normal">Normal</string>
+    <string name="goal_decrease">Decrease</string>
+    <string name="goal_desc_increase">Build habit, stay motivated with milestone alerts.</string>
+    <string name="goal_desc_normal">Routine tracking, no push either way.</string>
+    <string name="goal_desc_decrease">Limit time, get reminders when reaching budget.</string>
+    <string name="target_hours_label_increase">Target hours per day (build habit)</string>
+    <string name="target_hours_label_normal">Hours per day (routine tracking)</string>
+    <string name="target_hours_label_decrease">Max limit hours per day (limit usage)</string>
+    <string name="target_label_short">Target</string>
+    <string name="remaining_label_short">Remaining</string>
+    <string name="tracked_label_short">Tracked</string>
+    <string name="over_limit_label">Over limit</string>
+    <string name="hours_short">h</string>
+    <string name="hours_per_day_short">h/day</string>
+
+    <!-- Motivational Notifications Toggle -->
+    <string name="motivational_notifications_title">Motivational Milestones</string>
+    <string name="motivational_notifications_desc" formatted="false">Send encouraging messages and reminders when reaching 25%, 50%, 75%, and 100% of targets</string>
+
+    <!-- General buttons and placeholders -->
+    <string name="delete_button">Delete</string>
+    <string name="activity_name_preview_default">Activity name</string>
+    <string name="app_title_tracker">LifeFlow</string>
+    <string name="quick_adjust_header">QUICK ADJUST</string>
+    <string name="minutes_short">m</string>
+
+    <!-- Settings & Downgrade / Reset strings -->
+    <string name="downgrade_free_tier">Downgrade to Free Tier</string>
+    <string name="switched_free_tier_toast">Switched to Free Tier</string>
+    <string name="cannot_open_file_picker">Cannot open file picker: %1$s</string>
+    <string name="reset_everything_button">Reset Everything</string>
+    <string name="save_or_share_backup">Save or Share Backup</string>
+    <string name="backup_unknown_date">Unknown date</string>
+    
+    <!-- Backup Metadata template -->
+    <string name="backup_meta_prompt">Backup Date: %1$s\n\nContains:\n• %2$s\n• %3$s\n\nSelect restore mode:</string>
+    <string name="confirm_full_replacement_title">Confirm Full Replacement</string>
+    <string name="confirm_full_replacement_msg">This will erase current activities and sessions and replace them with this backup.</string>
+    <string name="proceed_replace_button">Proceed &amp; Replace</string>
+    
+    <!-- Time adjustment period tags -->
+    <string name="period_tag_today">(Today)</string>
+    <string name="period_tag_yesterday">(Yesterday)</string>
+    <string name="period_tag_selected_day">(Selected Day)</string>
+    <string name="period_tag_this_week">(This Week)</string>
+    <string name="period_tag_last_week">(Last Week)</string>
+    <string name="period_tag_selected_week">(Selected Week)</string>
+    <string name="period_tag_this_month">(This Month)</string>
+    <string name="period_tag_last_month">(Last Month)</string>
+    <string name="period_tag_selected_month">(Selected Month)</string>
+    <string name="period_tag_this_year">(This Year)</string>
+    <string name="period_tag_last_year">(Last Year)</string>
+    <string name="period_tag_selected_year">(Selected Year)</string>
+
+    <!-- Period navigation subtitles -->
+    <string name="period_subtitle_today">Current day metrics</string>
+    <string name="period_subtitle_yesterday">Past day history</string>
+    <string name="period_subtitle_this_week">Current week metrics</string>
+    <string name="period_subtitle_last_week">Previous week history</string>
+    <string name="period_subtitle_this_month">Current month metrics</string>
+    <string name="period_subtitle_last_month">Previous month history</string>
+    <string name="period_subtitle_this_year">Current year overview</string>
+    <string name="period_subtitle_last_year">Previous year history</string>
+    <string name="period_navigation_week">Week: %1$s</string>
+    <string name="week_number_label">Week %1$s</string>
+    <string name="period_navigation_year">Year %1$s</string>
+
+    <!-- Templates for composite messages -->
+    <string name="import_success_template">Successfully imported %1$s and %2$s!</string>
+
+    <!-- Plural resources -->
+    <plurals name="days_ago">
+        <item quantity="one">1 day ago</item>
+        <item quantity="other">%s days ago</item>
+    </plurals>
+    <plurals name="weeks_ago">
+        <item quantity="one">1 week ago</item>
+        <item quantity="other">%s weeks ago</item>
+    </plurals>
+    <plurals name="months_ago">
+        <item quantity="one">1 month ago</item>
+        <item quantity="other">%s months ago</item>
+    </plurals>
+    <plurals name="years_ago">
+        <item quantity="one">1 year ago</item>
+        <item quantity="other">%s years ago</item>
+    </plurals>
+    <plurals name="plural_activities">
+        <item quantity="one">1 Activity</item>
+        <item quantity="other">%s Activities</item>
+    </plurals>
+    <plurals name="plural_sessions">
+        <item quantity="one">1 Tracked Session</item>
+        <item quantity="other">%s Tracked Sessions</item>
+    </plurals>
+    <string name="target_achieved_increase">Target reached 🎉 — %1$s</string>
+    <string name="target_exceeded_decrease">Exceeded limit by %1$s</string>
+    <string name="target_remaining">Remaining %1$s of %2$s</string>
+    <string name="goal_exceeds_24h_error">Total daily goals cannot exceed 24 hours!</string>
+</resources>
