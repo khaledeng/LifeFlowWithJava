@@ -11,7 +11,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.MainActivity;
 import com.example.R;
@@ -116,17 +118,60 @@ public class DashboardFragment extends Fragment {
         adapter = new DashboardActivityAdapter(new DashboardActivityAdapter.OnActivityActionListener() {
             @Override
             public void onStartClicked(Activity activity) {
+                com.example.util.HapticHelper.vibrateStart(getContext());
                 repository.startActivity(activity.getId(), null);
             }
 
             @Override
             public void onStopClicked(Activity activity) {
+                com.example.util.HapticHelper.vibrateStop(getContext());
                 repository.stopActiveSession(null);
             }
         });
 
         binding.rvDashboardActivities.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.rvDashboardActivities.setAdapter(adapter);
+
+        ItemTouchHelper.SimpleCallback touchHelperCallback = new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                int fromPos = viewHolder.getAdapterPosition();
+                int toPos = target.getAdapterPosition();
+                com.example.util.HapticHelper.performClick(viewHolder.itemView);
+                return adapter.onItemMove(fromPos, toPos);
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                // No swipe action needed
+            }
+
+            @Override
+            public void onSelectedChanged(@Nullable RecyclerView.ViewHolder viewHolder, int actionState) {
+                super.onSelectedChanged(viewHolder, actionState);
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                    com.example.util.HapticHelper.performClick(viewHolder.itemView);
+                    viewHolder.itemView.animate().scaleX(1.02f).scaleY(1.02f).setDuration(150).start();
+                }
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                viewHolder.itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                // Persist new order into database
+                List<Activity> reordered = adapter.getActivities();
+                if (reordered != null && !reordered.isEmpty()) {
+                    repository.reorderActivities(new ArrayList<>(reordered), null);
+                }
+            }
+        };
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(touchHelperCallback);
+        itemTouchHelper.attachToRecyclerView(binding.rvDashboardActivities);
     }
 
     private void setupObservers() {

@@ -38,6 +38,7 @@
     <string name="activity_name_hint">e.g. Study, Reading, Yoga</string>
     <string name="activity_color_label">Choose Color</string>
     <string name="activity_icon_label">Choose Icon</string>
+    <string name="custom_emoji_hint">Type custom emoji or text (e.g. 🎯)</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
     <string name="delete_confirm_title">Delete Activity?</string>

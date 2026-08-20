@@ -279,6 +279,19 @@ public class TrackingRepository {
         });
     }
 
+    public void reorderActivities(List<Activity> reorderedList, Runnable onComplete) {
+        if (reorderedList == null || reorderedList.isEmpty()) return;
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            long baseTime = System.currentTimeMillis() - (reorderedList.size() * 1000L);
+            for (int i = 0; i < reorderedList.size(); i++) {
+                Activity act = reorderedList.get(i);
+                act.setCreatedAt(baseTime + (i * 1000L));
+                activityDao.updateActivity(act);
+            }
+            if (onComplete != null) onComplete.run();
+        });
+    }
+
     public void deleteActivitySafely(Activity activity, Runnable onComplete) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             long now = System.currentTimeMillis();
@@ -474,8 +487,10 @@ public class TrackingRepository {
             cal.set(Calendar.MILLISECOND, 0);
             long startToday = cal.getTimeInMillis();
 
-            // Week
-            cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+            // Week (Starting from Saturday)
+            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+            int daysSinceSaturday = (dayOfWeek - Calendar.SATURDAY + 7) % 7;
+            cal.add(Calendar.DAY_OF_YEAR, -daysSinceSaturday);
             long startWeek = cal.getTimeInMillis();
             int weekNum = cal.get(Calendar.WEEK_OF_YEAR);
             totals.weekNum = weekNum > 0 ? weekNum : 1;
@@ -619,7 +634,7 @@ public class TrackingRepository {
                         labels[i] = formatHourLabel(i * 2, isArabic);
                     }
                 }
-            } else if (periodTab == 1) { // Week: 7 days Mon..Sun (Max 24h per slot)
+            } else if (periodTab == 1) { // Week: 7 days Sat..Fri (Max 24h per slot)
                 numSlots = 7;
                 labels = new String[7];
                 slotStarts = new long[numSlots];
@@ -629,19 +644,21 @@ public class TrackingRepository {
                 cal.set(Calendar.MINUTE, 0);
                 cal.set(Calendar.SECOND, 0);
                 cal.set(Calendar.MILLISECOND, 0);
-                cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-                cal.add(Calendar.WEEK_OF_YEAR, periodOffset);
-                long monStart = cal.getTimeInMillis();
+                int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+                int daysSinceSaturday = (dayOfWeek - Calendar.SATURDAY + 7) % 7;
+                cal.add(Calendar.DAY_OF_YEAR, -daysSinceSaturday);
+                cal.add(Calendar.DAY_OF_YEAR, periodOffset * 7);
+                long satStart = cal.getTimeInMillis();
 
                 java.text.SimpleDateFormat sdfDay = new java.text.SimpleDateFormat("EEE", Locale.getDefault());
                 for (int i = 0; i < 7; i++) {
-                    slotStarts[i] = monStart + (i * 86400000L);
+                    slotStarts[i] = satStart + (i * 86400000L);
                     slotEnds[i] = slotStarts[i] + 86400000L;
                     labels[i] = sdfDay.format(new java.util.Date(slotStarts[i]));
                 }
             } else if (periodTab == 2) { // Month: 4 weeks
                 numSlots = 4;
-                labels = isArabic ? new String[]{"أ1", "أ2", "أ3", "أ4"} : new String[]{"W1", "W2", "W3", "W4"};
+                labels = new String[]{"W1", "W2", "W3", "W4"};
                 slotStarts = new long[numSlots];
                 slotEnds = new long[numSlots];
 
@@ -1471,7 +1488,7 @@ public class TrackingRepository {
         int h = hour24 % 24;
         int hour12 = h % 12;
         if (hour12 == 0) hour12 = 12;
-        String suffix = isArabic ? (h < 12 ? "ص" : "م") : (h < 12 ? "a" : "p");
+        String suffix = (h < 12 ? "a" : "p");
         return hour12 + suffix;
     }
 }

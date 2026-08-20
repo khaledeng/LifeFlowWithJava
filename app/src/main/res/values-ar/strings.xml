@@ -39,6 +39,7 @@
     <string name="activity_name_hint">مثل: قراءة، دراسة، رياضة</string>
     <string name="activity_color_label">اختر اللون</string>
     <string name="activity_icon_label">اختر الأيقونة</string>
+    <string name="custom_emoji_hint">اكتب إيموجي مخصص (مثل: 🎯)</string>
     <string name="save_button">حفظ</string>
     <string name="cancel_button">إلغاء</string>
     <string name="delete_confirm_title">حذف النشاط؟</string>

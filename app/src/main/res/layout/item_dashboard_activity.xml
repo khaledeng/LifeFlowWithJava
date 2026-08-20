@@ -85,21 +85,38 @@
             tools:text="الهدف اتحقق 🎉 — 8 ساعات" />
 
         <!-- Percentage Pill -->
-        <TextView
-            android:id="@+id/tv_percentage_pill"
+        <LinearLayout
+            android:id="@+id/layout_percentage_pill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
             android:background="@drawable/bg_active_pill"
-            android:textColor="@color/white"
-            android:textSize="11sp"
-            android:textStyle="bold"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/tv_activity_name"
-            tools:text="100%"
-            tools:visibility="visible" />
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tv_percentage_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="37%" />
+
+            <ImageView
+                android:id="@+id/iv_percentage_arrow"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginStart="3dp"
+                android:src="@drawable/ic_arrow_up"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
 
         <!-- Action Button (Start/Stop) -->
         <FrameLayout
@@ -107,7 +124,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_percentage_pill"
+            app:layout_constraintTop_toBottomOf="@id/layout_percentage_pill"
             app:layout_constraintBottom_toBottomOf="@id/tv_target_info">
 
             <LinearLayout

@@ -74,6 +74,14 @@ public class Activity {
         this.category = category;
     }
 
+    public ActivityCategory getGoalType() {
+        return getCategory();
+    }
+
+    public void setGoalType(ActivityCategory category) {
+        setCategory(category);
+    }
+
     public float getExpectedHoursPerDay() {
         return expectedHoursPerDay;
     }

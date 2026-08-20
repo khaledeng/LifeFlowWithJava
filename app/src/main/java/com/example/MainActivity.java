@@ -95,9 +95,13 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             return true;
         }
         currentNavId = itemId;
+        com.example.util.HapticHelper.performTabSwitch(binding.bottomNavigation);
 
         if (itemId == R.id.nav_home) {
             showFragment(new DashboardFragment(), "FRAGMENT_DASHBOARD");
+            return true;
+        } else if (itemId == R.id.nav_activities) {
+            showFragment(new ActivitiesFragment(), "FRAGMENT_ACTIVITIES");
             return true;
         } else if (itemId == R.id.nav_stats) {
             showFragment(new StatsFragment(), "FRAGMENT_STATS");
@@ -111,8 +115,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     public void navigateToActivities() {
-        currentNavId = -1;
-        showFragment(new ActivitiesFragment(), "FRAGMENT_ACTIVITIES");
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_activities);
     }
 
     public void navigateToSettings() {

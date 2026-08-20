@@ -200,7 +200,6 @@ public class MultiLineStatsChartView extends View {
 
         // 1. Draw Y-Axis labels & horizontal grid lines (5 levels: 0, 1/4, 2/4, 3/4, 4/4)
         int steps = 4;
-        boolean isArabic = Locale.getDefault().getLanguage().equals("ar");
         for (int i = 0; i <= steps; i++) {
             float ratio = (float) i / steps;
             float y = paddingTop + chartHeight - (ratio * chartHeight);
@@ -208,17 +207,17 @@ public class MultiLineStatsChartView extends View {
 
             String label;
             if (val <= 0.001f) {
-                label = "\u200E0";
+                label = "0";
             } else if (maxYValue <= 1.0f) {
                 long mins = Math.round(val * 60f);
-                label = String.format(Locale.getDefault(), "\u200E%d%s", mins, isArabic ? "د" : "m");
+                label = mins + "m";
             } else if (val >= 10) {
-                label = String.format(Locale.getDefault(), "\u200E%.0f%s", val, isArabic ? "س" : "h");
+                label = String.format(Locale.US, "%.0fh", val);
             } else {
                 if (Math.abs(val - Math.round(val)) < 0.05f) {
-                    label = String.format(Locale.getDefault(), "\u200E%.0f%s", val, isArabic ? "س" : "h");
+                    label = String.format(Locale.US, "%.0fh", val);
                 } else {
-                    label = String.format(Locale.getDefault(), "\u200E%.1f%s", val, isArabic ? "س" : "h");
+                    label = String.format(Locale.US, "%.1fh", val);
                 }
             }
 
@@ -331,21 +330,25 @@ public class MultiLineStatsChartView extends View {
 
             // Tooltip box
             String tooltipSlot = xLabels[selectedIndex];
-            String tooltipVal = "";
+            String seriesName = "";
+            String durationStr = "0m";
             int tipColor = Color.WHITE;
 
             if (selectedSeries != null && selectedIndex < selectedSeries.values.length) {
                 float v = selectedSeries.values[selectedIndex]; if (v < 0) v = 0f;
-                tooltipVal = selectedSeries.name + ": \u200E" + formatDuration(v, isArabic);
+                seriesName = selectedSeries.name;
+                durationStr = formatDuration(v);
                 tipColor = selectedSeries.color;
             } else if (!seriesList.isEmpty()) {
                 Series topSeries = seriesList.get(0);
                 float v = (selectedIndex < topSeries.values.length) ? topSeries.values[selectedIndex] : 0f; if (v < 0) v = 0f;
-                tooltipVal = topSeries.name + ": \u200E" + formatDuration(v, isArabic);
+                seriesName = topSeries.name;
+                durationStr = formatDuration(v);
                 tipColor = topSeries.color;
             }
 
-            String fullText = tooltipSlot + " • " + tooltipVal;
+            // Directional isolation marker (\u200E) prevents mixed Arabic/English/Emoji text from inverting
+            String fullText = "\u200E" + tooltipSlot + " • " + seriesName + ": " + durationStr;
             float textWidth = tooltipTextPaint.measureText(fullText);
             float boxWidth = textWidth + dp(24f);
             float boxHeight = dp(28f);
@@ -367,18 +370,18 @@ public class MultiLineStatsChartView extends View {
         }
     }
 
-    private String formatDuration(float hoursVal, boolean isArabic) {
-        if (hoursVal <= 0.001f) return isArabic ? "0 د" : "0m";
+    private String formatDuration(float hoursVal) {
+        if (hoursVal <= 0.001f) return "0m";
         long totalMinutes = Math.round(hoursVal * 60f);
         if (totalMinutes == 0 && hoursVal > 0) totalMinutes = 1;
         long h = totalMinutes / 60;
         long m = totalMinutes % 60;
         if (h == 0) {
-            return m + (isArabic ? " د" : "m");
+            return m + "m";
         } else if (m == 0) {
-            return h + (isArabic ? " س" : "h");
+            return h + "h";
         } else {
-            return h + (isArabic ? " س " : "h ") + m + (isArabic ? " د" : "m");
+            return h + "h " + m + "m";
         }
     }
 

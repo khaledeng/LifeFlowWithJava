@@ -113,8 +113,18 @@ public class IconHelper {
                 return R.drawable.ic_study;
             case "ic_work":
                 return R.drawable.ic_work;
+            case "ic_laptop":
+                return R.drawable.ic_laptop;
+            case "ic_code":
+                return R.drawable.ic_code;
             case "ic_exercise":
                 return R.drawable.ic_exercise;
+            case "ic_fitness":
+                return R.drawable.ic_fitness;
+            case "ic_run":
+                return R.drawable.ic_run;
+            case "ic_bike":
+                return R.drawable.ic_bike;
             case "ic_entertainment":
                 return R.drawable.ic_entertainment;
             case "ic_sleep":
@@ -123,6 +133,36 @@ public class IconHelper {
                 return R.drawable.ic_reading;
             case "ic_meditation":
                 return R.drawable.ic_meditation;
+            case "ic_coffee":
+                return R.drawable.ic_coffee;
+            case "ic_restaurant":
+                return R.drawable.ic_restaurant;
+            case "ic_home_activity":
+                return R.drawable.ic_home_activity;
+            case "ic_music":
+                return R.drawable.ic_music;
+            case "ic_camera":
+                return R.drawable.ic_camera;
+            case "ic_heart":
+                return R.drawable.ic_heart;
+            case "ic_task":
+                return R.drawable.ic_task;
+            case "ic_check_circle":
+                return R.drawable.ic_check_circle;
+            case "ic_lightbulb":
+                return R.drawable.ic_lightbulb;
+            case "ic_fire":
+                return R.drawable.ic_fire;
+            case "ic_star":
+                return R.drawable.ic_star;
+            case "ic_smile":
+                return R.drawable.ic_smile;
+            case "ic_schedule":
+                return R.drawable.ic_schedule;
+            case "ic_growth":
+                return R.drawable.ic_growth;
+            case "ic_quran":
+                return R.drawable.ic_quran;
             case "ic_other":
             default:
                 return R.drawable.ic_other;
@@ -174,10 +214,30 @@ public class IconHelper {
         long totalSeconds = millis / 1000;
         long hours = totalSeconds / 3600;
         long minutes = (totalSeconds % 3600) / 60;
+        String formatted;
+        if (hours > 0) {
+            if (minutes > 0) {
+                formatted = String.format(java.util.Locale.US, "%dh %02dm", hours, minutes);
+            } else {
+                formatted = String.format(java.util.Locale.US, "%dh", hours);
+            }
+        } else if (minutes > 0) {
+            formatted = String.format(java.util.Locale.US, "%dm", minutes);
+        } else {
+            formatted = "0m";
+        }
+        return "\u200E" + formatted;
+    }
+
+    public static String formatDurationWithSeconds(long millis) {
+        if (millis < 0) millis = 0;
+        long totalSeconds = millis / 1000;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
         long seconds = totalSeconds % 60;
         String formatted;
         if (hours > 0) {
-            formatted = String.format(java.util.Locale.US, "%dh %02dm", hours, minutes);
+            formatted = String.format(java.util.Locale.US, "%dh %02dm %02ds", hours, minutes, seconds);
         } else if (minutes > 0) {
             formatted = String.format(java.util.Locale.US, "%dm %02ds", minutes, seconds);
         } else {

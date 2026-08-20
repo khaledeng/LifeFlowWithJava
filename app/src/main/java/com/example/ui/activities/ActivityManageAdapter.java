@@ -30,8 +30,22 @@ public class ActivityManageAdapter extends RecyclerView.Adapter<ActivityManageAd
     }
 
     public void setActivities(List<Activity> activities) {
-        this.activities = activities != null ? activities : new ArrayList<>();
+        this.activities = activities != null ? new ArrayList<>(activities) : new ArrayList<>();
         notifyDataSetChanged();
+    }
+
+    public List<Activity> getActivities() {
+        return activities;
+    }
+
+    public boolean onItemMove(int fromPosition, int toPosition) {
+        if (fromPosition < 0 || fromPosition >= activities.size() ||
+            toPosition < 0 || toPosition >= activities.size()) {
+            return false;
+        }
+        java.util.Collections.swap(activities, fromPosition, toPosition);
+        notifyItemMoved(fromPosition, toPosition);
+        return true;
     }
 
     @NonNull

@@ -18,7 +18,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.R;
 import com.example.data.TrackingRepository;
@@ -51,12 +53,13 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
     };
 
     private static final String[] ICON_CHOICES = {
-            "ic_study", "ic_work", "ic_exercise", "ic_entertainment",
-            "ic_sleep", "ic_reading", "ic_meditation", "ic_other",
-            "⚡", "🏃", "💻", "📚", "🎮", "😴", "🧘", "🎨",
-            "⚽", "🍕", "☕", "💼", "✈️", "🚗", "🎧", "💡",
-            "🔥", "❤️", "🚀", "🏋️", "🎵", "🎯", "🛒", "🚴",
-            "🏊", "🧪", "🍳", "📈", "🍿", "🐶", "🐱", "🌱"
+            "ic_work", "ic_laptop", "ic_code", "ic_study", "ic_reading",
+            "ic_exercise", "ic_fitness", "ic_run", "ic_bike",
+            "ic_entertainment", "ic_music", "ic_camera", "ic_sleep", "ic_meditation",
+            "ic_coffee", "ic_restaurant", "ic_home_activity",
+            "ic_task", "ic_check_circle", "ic_lightbulb", "ic_fire",
+            "ic_star", "ic_growth", "ic_schedule", "ic_smile", "ic_quran",
+            "ic_heart", "ic_other"
     };
 
     @Nullable
@@ -83,6 +86,46 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
         adapter = new ActivityManageAdapter(this);
         binding.rvActivitiesManage.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.rvActivitiesManage.setAdapter(adapter);
+
+        ItemTouchHelper.SimpleCallback touchHelperCallback = new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                int fromPos = viewHolder.getAdapterPosition();
+                int toPos = target.getAdapterPosition();
+                com.example.util.HapticHelper.performClick(viewHolder.itemView);
+                return adapter.onItemMove(fromPos, toPos);
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                // No swipe action
+            }
+
+            @Override
+            public void onSelectedChanged(@Nullable RecyclerView.ViewHolder viewHolder, int actionState) {
+                super.onSelectedChanged(viewHolder, actionState);
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                    com.example.util.HapticHelper.performClick(viewHolder.itemView);
+                    viewHolder.itemView.animate().scaleX(1.02f).scaleY(1.02f).setDuration(150).start();
+                }
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                viewHolder.itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start();
+                List<Activity> reordered = adapter.getActivities();
+                if (reordered != null && !reordered.isEmpty()) {
+                    repository.reorderActivities(new ArrayList<>(reordered), null);
+                }
+            }
+        };
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(touchHelperCallback);
+        itemTouchHelper.attachToRecyclerView(binding.rvActivitiesManage);
     }
 
     private void setupObservers() {
@@ -94,12 +137,14 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
 
     private void setupListeners() {
         binding.btnMenu.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             if (getActivity() instanceof com.example.MainActivity) {
                 ((com.example.MainActivity) getActivity()).showBurgerMenu();
             }
         });
 
         binding.fabAddActivity.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             if (!subscriptionManager.isPro() && activityList.size() >= SubscriptionManager.FREE_TIER_MAX_ACTIVITIES) {
                 showProLimitDialog();
             } else {
@@ -454,6 +499,7 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                 activityToEdit.setExpectedHoursPerDay(expectedHours);
                 activityToEdit.setColorHex(selectedColor[0]);
                 activityToEdit.setIconName(selectedIcon[0]);
+                com.example.util.HapticHelper.vibrateSuccess(getContext());
                 repository.updateActivity(activityToEdit, () -> {
                     requireActivity().runOnUiThread(dialog::dismiss);
                 });
@@ -467,6 +513,7 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                         false,
                         System.currentTimeMillis()
                 );
+                com.example.util.HapticHelper.vibrateSuccess(getContext());
                 repository.insertActivity(newActivity, () -> {
                     requireActivity().runOnUiThread(dialog::dismiss);
                 });
@@ -487,6 +534,7 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                 .setTitle(R.string.delete_activity)
                 .setMessage(getString(R.string.delete_activity_confirm, activity.getName()))
                 .setPositiveButton(R.string.delete_button, (dialog, which) -> {
+                    com.example.util.HapticHelper.vibrateStop(getContext());
                     repository.deleteActivitySafely(activity, null);
                 })
                 .setNegativeButton(R.string.cancel_button, null)

@@ -5,6 +5,8 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
@@ -21,6 +23,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.MainActivity;
 import com.example.R;
 import com.example.data.TrackingRepository;
+import com.example.data.entity.SessionEntity;
 import com.example.databinding.DialogEditStatTimeBinding;
 import com.example.databinding.FragmentStatsBinding;
 import com.example.util.IconHelper;
@@ -32,7 +35,7 @@ import java.util.List;
 
 /**
  * StatsFragment presents high-precision multi-line trend analytics and activity breakdown
- * across Day, Week, Month, and Year periods with real-time overview badges and time adjustment.
+ * across Day, Week, Month, and Year periods with real-time overview badges, active session ticker, and time adjustment.
  */
 public class StatsFragment extends Fragment {
 
@@ -41,6 +44,28 @@ public class StatsFragment extends Fragment {
     private StatsBreakdownAdapter adapter;
     private int currentPeriodTab = 0; // Default to Day (0 = Day, 1 = Week, 2 = Month, 3 = Year)
     private int periodOffset = 0; // 0 = current period, -1 = previous period, -2 = 2 periods ago...
+
+    private final Handler timerHandler = new Handler(Looper.getMainLooper());
+    private SessionEntity currentActiveSession = null;
+    private long baseDurationForActiveInWindow = 0;
+    private long windowStartMillis = 0;
+    private long windowEndMillis = 0;
+
+    private final Runnable timerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (binding != null && isAdded() && periodOffset == 0 && currentActiveSession != null && currentActiveSession.isActive()) {
+                long now = System.currentTimeMillis();
+                long sessionStartInWindow = Math.max(windowStartMillis, currentActiveSession.getStartTime());
+                long liveElapsed = Math.max(0, now - sessionStartInWindow);
+                long liveTotalForActive = baseDurationForActiveInWindow + liveElapsed;
+
+                adapter.updateActiveDuration(currentActiveSession.getActivityId(), liveTotalForActive);
+
+                timerHandler.postDelayed(this, 1000);
+            }
+        }
+    };
 
     @Nullable
     @Override
@@ -70,11 +95,13 @@ public class StatsFragment extends Fragment {
 
     private void setupPeriodNavigation() {
         binding.btnPrevPeriod.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             periodOffset--;
             refreshAllStats();
         });
 
         binding.btnNextPeriod.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             if (periodOffset < 0) {
                 periodOffset++;
                 refreshAllStats();
@@ -86,6 +113,7 @@ public class StatsFragment extends Fragment {
             public void onSwipeToPrevious() {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
+                        com.example.util.HapticHelper.performTabSwitch(binding.chartMultiLineStats);
                         periodOffset--;
                         refreshAllStats();
                     });
@@ -97,6 +125,7 @@ public class StatsFragment extends Fragment {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         if (periodOffset < 0) {
+                            com.example.util.HapticHelper.performTabSwitch(binding.chartMultiLineStats);
                             periodOffset++;
                             refreshAllStats();
                         }
@@ -162,7 +191,7 @@ public class StatsFragment extends Fragment {
         }
         dialogBinding.tvDialogPeriodTag.setText(periodTag);
         dialogBinding.tvDialogLimitInfo.setText(getString(R.string.max_limit_info, maxLimitFormatted));
-        dialogBinding.tvDialogCurrentDuration.setText(getString(R.string.current_time_prefix, IconHelper.formatDuration(stat.durationMillis)));
+        dialogBinding.tvDialogCurrentDuration.setText(getString(R.string.current_time_prefix, IconHelper.formatDurationWithSeconds(stat.durationMillis)));
 
         // Pre-fill existing duration in hours and minutes (capped at max limit)
         long totalSecs = stat.durationMillis / 1000;
@@ -199,6 +228,7 @@ public class StatsFragment extends Fragment {
 
         // Quick adjustment buttons (respecting 24h / period max boundaries)
         dialogBinding.btnAdjustMinus1h.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             dialogBinding.tilHours.setError(null);
             long current = getCurrentInputMinutes(dialogBinding, totalMinutesHolder[0]);
             totalMinutesHolder[0] = Math.max(0, current - 60);
@@ -206,6 +236,7 @@ public class StatsFragment extends Fragment {
         });
 
         dialogBinding.btnAdjustMinus15m.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             dialogBinding.tilHours.setError(null);
             long current = getCurrentInputMinutes(dialogBinding, totalMinutesHolder[0]);
             totalMinutesHolder[0] = Math.max(0, current - 15);
@@ -213,6 +244,7 @@ public class StatsFragment extends Fragment {
         });
 
         dialogBinding.btnAdjustPlus15m.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             dialogBinding.tilHours.setError(null);
             long current = getCurrentInputMinutes(dialogBinding, totalMinutesHolder[0]);
             totalMinutesHolder[0] = Math.min(maxMinutes, current + 15);
@@ -220,6 +252,7 @@ public class StatsFragment extends Fragment {
         });
 
         dialogBinding.btnAdjustPlus1h.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
             dialogBinding.tilHours.setError(null);
             long current = getCurrentInputMinutes(dialogBinding, totalMinutesHolder[0]);
             totalMinutesHolder[0] = Math.min(maxMinutes, current + 60);
@@ -273,6 +306,7 @@ public class StatsFragment extends Fragment {
             long newTotalMillis = totalInputMinutes * 60L * 1000L;
 
             long[] range = getActivePeriodRange();
+            com.example.util.HapticHelper.vibrateSuccess(getContext());
             repository.adjustActivityTime(
                     stat.activityId,
                     stat.name,
@@ -340,10 +374,12 @@ public class StatsFragment extends Fragment {
                 cal.set(Calendar.MINUTE, 0);
                 cal.set(Calendar.SECOND, 0);
                 cal.set(Calendar.MILLISECOND, 0);
-                cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-                cal.add(Calendar.WEEK_OF_YEAR, periodOffset);
+                int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+                int daysSinceSaturday = (dayOfWeek - Calendar.SATURDAY + 7) % 7;
+                cal.add(Calendar.DAY_OF_YEAR, -daysSinceSaturday);
+                cal.add(Calendar.DAY_OF_YEAR, periodOffset * 7);
                 startMillis = cal.getTimeInMillis();
-                cal.add(Calendar.WEEK_OF_YEAR, 1);
+                cal.add(Calendar.DAY_OF_YEAR, 7);
                 endMillis = cal.getTimeInMillis();
                 break;
             case 2: // Month
@@ -399,6 +435,18 @@ public class StatsFragment extends Fragment {
         repository.getAllSessions().observe(getViewLifecycleOwner(), sessions -> {
             refreshAllStats();
         });
+
+        repository.getActiveSession().observe(getViewLifecycleOwner(), activeSession -> {
+            currentActiveSession = activeSession;
+            refreshAllStats();
+        });
+    }
+
+    private void checkAndStartTimer() {
+        timerHandler.removeCallbacks(timerRunnable);
+        if (periodOffset == 0 && currentActiveSession != null && currentActiveSession.isActive()) {
+            timerHandler.post(timerRunnable);
+        }
     }
 
     private void refreshAllStats() {
@@ -434,8 +482,10 @@ public class StatsFragment extends Fragment {
                 break;
 
             case 1: // Week
-                cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
-                cal.add(Calendar.WEEK_OF_YEAR, periodOffset);
+                int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+                int daysSinceSaturday = (dayOfWeek - Calendar.SATURDAY + 7) % 7;
+                cal.add(Calendar.DAY_OF_YEAR, -daysSinceSaturday);
+                cal.add(Calendar.DAY_OF_YEAR, periodOffset * 7);
                 long startW = cal.getTimeInMillis();
                 cal.add(Calendar.DAY_OF_YEAR, 6);
                 long endW = cal.getTimeInMillis();
@@ -549,13 +599,30 @@ public class StatsFragment extends Fragment {
 
     private void loadPeriodStats() {
         long[] range = getActivePeriodRange();
-        long startMillis = range[0];
-        long endMillis = range[1];
+        windowStartMillis = range[0];
+        windowEndMillis = range[1];
 
-        repository.calculateStats(startMillis, endMillis, (totalTrackedMillis, totalWindowMillis, stats) -> {
+        repository.calculateStats(windowStartMillis, windowEndMillis, (totalTrackedMillis, totalWindowMillis, stats) -> {
             if (binding == null) return;
             requireActivity().runOnUiThread(() -> {
                 if (binding == null) return;
+
+                long activeId = (currentActiveSession != null && currentActiveSession.isActive()) ? currentActiveSession.getActivityId() : -1;
+
+                if (periodOffset == 0 && activeId != -1) {
+                    long now = System.currentTimeMillis();
+                    long sessionStartInWindow = Math.max(windowStartMillis, currentActiveSession.getStartTime());
+                    long liveElapsed = Math.max(0, now - sessionStartInWindow);
+
+                    for (TrackingRepository.ActivityStat stat : stats) {
+                        if (stat.activityId == activeId) {
+                            baseDurationForActiveInWindow = Math.max(0, stat.durationMillis - liveElapsed);
+                            break;
+                        }
+                    }
+                } else {
+                    baseDurationForActiveInWindow = 0;
+                }
 
                 if (stats.isEmpty()) {
                     binding.tvEmptyStats.setVisibility(View.VISIBLE);
@@ -567,7 +634,9 @@ public class StatsFragment extends Fragment {
                     binding.rvStatsBreakdown.setVisibility(View.VISIBLE);
                     binding.layoutDistributionHeader.setVisibility(View.VISIBLE);
                     binding.chartPieStats.setVisibility(View.VISIBLE);
-                    adapter.setStats(stats);
+
+                    long effectiveActiveId = (periodOffset == 0) ? activeId : -1;
+                    adapter.setStats(stats, effectiveActiveId);
 
                     // Build Pie Chart slices representing the relative occupancy of tracked time
                     java.util.List<PieChartView.Slice> pieSlices = new java.util.ArrayList<>();
@@ -586,6 +655,8 @@ public class StatsFragment extends Fragment {
 
                     binding.chartPieStats.setSlices(pieSlices);
                 }
+
+                checkAndStartTimer();
             });
         });
     }
@@ -597,8 +668,15 @@ public class StatsFragment extends Fragment {
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        timerHandler.removeCallbacks(timerRunnable);
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
+        timerHandler.removeCallbacks(timerRunnable);
         binding = null;
     }
 }

@@ -37,12 +37,26 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
     }
 
     public void setActivities(List<Activity> activities, long activeActivityId, Map<Long, Long> todayDurations) {
-        this.activities = activities != null ? activities : new ArrayList<>();
+        this.activities = activities != null ? new ArrayList<>(activities) : new ArrayList<>();
         this.activeActivityId = activeActivityId;
         if (todayDurations != null) {
             this.todayDurations = todayDurations;
         }
         notifyDataSetChanged();
+    }
+
+    public List<Activity> getActivities() {
+        return activities;
+    }
+
+    public boolean onItemMove(int fromPosition, int toPosition) {
+        if (fromPosition < 0 || fromPosition >= activities.size() ||
+            toPosition < 0 || toPosition >= activities.size()) {
+            return false;
+        }
+        java.util.Collections.swap(activities, fromPosition, toPosition);
+        notifyItemMoved(fromPosition, toPosition);
+        return true;
     }
 
     public void setActiveActivityId(long activeActivityId) {
@@ -140,8 +154,8 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
                 if (binding.progressBarTarget.getVisibility() != View.GONE) {
                     binding.progressBarTarget.setVisibility(View.GONE);
                 }
-                if (binding.tvPercentagePill.getVisibility() != View.GONE) {
-                    binding.tvPercentagePill.setVisibility(View.GONE);
+                if (binding.layoutPercentagePill.getVisibility() != View.GONE) {
+                    binding.layoutPercentagePill.setVisibility(View.GONE);
                 }
                 return;
             }
@@ -152,8 +166,8 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
             if (binding.progressBarTarget.getVisibility() != View.VISIBLE) {
                 binding.progressBarTarget.setVisibility(View.VISIBLE);
             }
-            if (binding.tvPercentagePill.getVisibility() != View.VISIBLE) {
-                binding.tvPercentagePill.setVisibility(View.VISIBLE);
+            if (binding.layoutPercentagePill.getVisibility() != View.VISIBLE) {
+                binding.layoutPercentagePill.setVisibility(View.VISIBLE);
             }
 
             long targetMillis = (long) (targetHours * 3600.0 * 1000.0);
@@ -166,41 +180,64 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
                 binding.progressBarTarget.setProgressCompat(pct, false);
             }
 
-            com.example.data.entity.ActivityCategory category = activity.getCategory();
+            com.example.data.entity.ActivityCategory category = activity.getGoalType();
             int progressColor = activityColor;
             int pillColor = Color.parseColor("#333333");
+            int textColor = Color.parseColor("#E0E0E0");
 
-            if (category == com.example.data.entity.ActivityCategory.DECREASE) {
+            if (category == com.example.data.entity.ActivityCategory.INCREASE) {
+                binding.ivPercentageArrow.setVisibility(View.VISIBLE);
+                binding.ivPercentageArrow.setImageResource(com.example.R.drawable.ic_arrow_up);
+                int arrowColor = Color.parseColor("#39D353");
+                binding.ivPercentageArrow.setColorFilter(arrowColor);
+
+                progressColor = Color.parseColor("#39D353");
                 if (displayPct >= 100) {
+                    pillColor = Color.parseColor("#1C3A24"); // Dark green badge
+                    textColor = Color.parseColor("#39D353");
+                } else {
+                    pillColor = Color.parseColor("#1B2E20");
+                    textColor = Color.parseColor("#E0E0E0");
+                }
+            } else if (category == com.example.data.entity.ActivityCategory.DECREASE) {
+                binding.ivPercentageArrow.setVisibility(View.VISIBLE);
+                binding.ivPercentageArrow.setImageResource(com.example.R.drawable.ic_arrow_down);
+
+                if (displayPct >= 100) {
+                    int arrowColor = Color.parseColor("#FF5252");
+                    binding.ivPercentageArrow.setColorFilter(arrowColor);
                     progressColor = Color.parseColor("#FF5252"); // Red warning
                     pillColor = Color.parseColor("#5A2424"); // Dark red
+                    textColor = Color.parseColor("#FF5252");
                 } else if (displayPct >= 75) {
+                    int arrowColor = Color.parseColor("#FF9800");
+                    binding.ivPercentageArrow.setColorFilter(arrowColor);
                     progressColor = Color.parseColor("#FF9800"); // Orange caution
                     pillColor = Color.parseColor("#4A361A"); // Dark orange
+                    textColor = Color.parseColor("#FFB74D");
                 } else {
-                    progressColor = Color.parseColor("#39D353"); // Green safe
-                    pillColor = Color.parseColor("#1C3A24"); // Dark green
+                    int arrowColor = Color.parseColor("#FF8C42");
+                    binding.ivPercentageArrow.setColorFilter(arrowColor);
+                    progressColor = Color.parseColor("#4CAF50"); // Safe green progress
+                    pillColor = Color.parseColor("#2D231E");
+                    textColor = Color.parseColor("#E0E0E0");
                 }
-            } else if (category == com.example.data.entity.ActivityCategory.INCREASE) {
-                if (displayPct >= 100) {
-                    pillColor = Color.parseColor("#1C3A24"); // Dark green
-                }
+            } else {
+                binding.ivPercentageArrow.setVisibility(View.GONE);
+                progressColor = activityColor;
+                pillColor = Color.parseColor("#2A2A2A");
+                textColor = Color.parseColor("#AAAAAA");
             }
 
             // Set Pill properties
             binding.tvPercentagePill.setText(String.format(java.util.Locale.US, "\u200E%d%%", displayPct));
-            if (displayPct >= 100 && category == com.example.data.entity.ActivityCategory.INCREASE) {
-                binding.tvPercentagePill.setTextColor(Color.parseColor("#39D353"));
-            } else if (displayPct >= 100 && category == com.example.data.entity.ActivityCategory.DECREASE) {
-                binding.tvPercentagePill.setTextColor(Color.parseColor("#FF5252"));
-            } else {
-                binding.tvPercentagePill.setTextColor(Color.parseColor("#AAAAAA"));
-            }
+            binding.tvPercentagePill.setTextColor(textColor);
+
             android.graphics.drawable.GradientDrawable pillBg = new android.graphics.drawable.GradientDrawable();
             pillBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
             pillBg.setCornerRadius(50f);
             pillBg.setColor(pillColor);
-            binding.tvPercentagePill.setBackground(pillBg);
+            binding.layoutPercentagePill.setBackground(pillBg);
 
             if (binding.progressBarTarget.getIndicatorColor() == null ||
                     binding.progressBarTarget.getIndicatorColor().length == 0 ||
