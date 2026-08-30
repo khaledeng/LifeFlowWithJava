@@ -12,5 +12,9 @@
         android:id="@+id/nav_stats"
         android:icon="@drawable/ic_nav_stats"
         android:title="@string/nav_stats" />
+    <item
+        android:id="@+id/nav_progress"
+        android:icon="@drawable/ic_nav_progress"
+        android:title="@string/nav_progress" />
 </menu>
 

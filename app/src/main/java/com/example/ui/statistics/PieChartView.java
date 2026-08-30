@@ -32,7 +32,10 @@ public class PieChartView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint centerKnockoutPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint centerBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rectF = new RectF();
+    private final RectF drawRect = new RectF();
     
     private int selectedIndex = -1;
     private android.widget.Toast activeToast = null;
@@ -65,6 +68,13 @@ public class PieChartView extends View {
         borderPaint.setStyle(Paint.Style.STROKE);
         borderPaint.setColor(Color.parseColor("#121214")); // Background color to act as a separator gap
         borderPaint.setStrokeWidth(dp(3f));
+
+        centerKnockoutPaint.setColor(Color.parseColor("#121214")); // Dark theme bg
+        centerKnockoutPaint.setStyle(Paint.Style.FILL);
+
+        centerBorderPaint.setColor(Color.parseColor("#26262B"));
+        centerBorderPaint.setStyle(Paint.Style.STROKE);
+        centerBorderPaint.setStrokeWidth(dp(1.5f));
     }
 
     public void setSlices(List<Slice> newSlices) {
@@ -229,7 +239,7 @@ public class PieChartView extends View {
             float ox = (float) Math.cos(Math.toRadians(middleAngle)) * offset;
             float oy = (float) Math.sin(Math.toRadians(middleAngle)) * offset;
 
-            RectF drawRect = new RectF(rectF);
+            drawRect.set(rectF);
             drawRect.offset(ox, oy);
 
             // Draw the slice
@@ -260,16 +270,9 @@ public class PieChartView extends View {
         }
 
         // Draw a beautiful central hollow knockout to turn it into an elegant donut chart
-        Paint centerKnockoutPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        centerKnockoutPaint.setColor(Color.parseColor("#121214")); // Dark theme bg
-        centerKnockoutPaint.setStyle(Paint.Style.FILL);
         canvas.drawCircle(centerX, centerY, radius * 0.35f, centerKnockoutPaint);
 
         // Subtle inner glowing border for the center hole
-        Paint centerBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        centerBorderPaint.setColor(Color.parseColor("#26262B"));
-        centerBorderPaint.setStyle(Paint.Style.STROKE);
-        centerBorderPaint.setStrokeWidth(dp(1.5f));
         canvas.drawCircle(centerX, centerY, radius * 0.35f, centerBorderPaint);
     }
 

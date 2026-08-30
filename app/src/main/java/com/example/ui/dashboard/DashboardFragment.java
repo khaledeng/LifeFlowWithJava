@@ -231,6 +231,32 @@ public class DashboardFragment extends Fragment {
                 ((MainActivity) getActivity()).showBurgerMenu();
             }
         });
+
+        binding.bannerUsagePermission.setOnClickListener(v -> {
+            com.example.util.SmartTrackingManager.openUsageSettings(requireContext());
+        });
+
+        binding.bannerOverlayPermission.setOnClickListener(v -> {
+            com.example.util.SmartTrackingManager.openOverlaySettings(requireContext());
+        });
+
+        binding.bannerNotifPermission.setOnClickListener(v -> {
+            com.example.util.SmartTrackingManager.openNotificationSettings(requireContext());
+        });
+    }
+
+    private void checkAndDisplayPermissionWarnings() {
+        if (binding == null || getContext() == null) return;
+        boolean hasUsage = com.example.util.SmartTrackingManager.hasUsagePermission(requireContext());
+        boolean hasOverlay = com.example.util.SmartTrackingManager.hasOverlayPermission(requireContext());
+        boolean hasNotif = com.example.util.SmartTrackingManager.hasNotificationPermission(requireContext());
+
+        boolean anyMissing = (!hasUsage || !hasOverlay || !hasNotif);
+        binding.layoutPermissionBanners.setVisibility(anyMissing ? View.VISIBLE : View.GONE);
+
+        binding.bannerUsagePermission.setVisibility(!hasUsage ? View.VISIBLE : View.GONE);
+        binding.bannerOverlayPermission.setVisibility(!hasOverlay ? View.VISIBLE : View.GONE);
+        binding.bannerNotifPermission.setVisibility(!hasNotif ? View.VISIBLE : View.GONE);
     }
 
     private void refreshTodayDurations() {
@@ -252,6 +278,7 @@ public class DashboardFragment extends Fragment {
     public void onResume() {
         super.onResume();
         setupHeaderDate();
+        checkAndDisplayPermissionWarnings();
         if (currentActiveSession != null && currentActiveSession.isActive()) {
             timerHandler.removeCallbacks(timerRunnable);
             timerHandler.post(timerRunnable);

@@ -157,9 +157,12 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
         new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.free_tier_limit_reached)
                 .setMessage(R.string.free_tier_limit_message)
-                .setPositiveButton(R.string.upgrade_pro_button, (dialog, which) -> {
-                    subscriptionManager.setPro(true);
-                    Toast.makeText(requireContext(), R.string.pro_unlocked_toast, Toast.LENGTH_SHORT).show();
+                .setPositiveButton(R.string.btn_enter_activation_code, (dialog, which) -> {
+                    com.example.util.ActivationDialogHelper.showActivationCodeDialog(requireContext(), () -> {
+                        if (subscriptionManager.isPro()) {
+                            showActivityEditDialog(null);
+                        }
+                    });
                 })
                 .setNegativeButton(R.string.cancel_button, null)
                 .show();

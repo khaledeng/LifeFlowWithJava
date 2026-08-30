@@ -18,6 +18,7 @@ import com.example.databinding.ActivityMainBinding;
 import com.example.service.TrackingService;
 import com.example.ui.activities.ActivitiesFragment;
 import com.example.ui.dashboard.DashboardFragment;
+import com.example.ui.progress.TrackProgressFragment;
 import com.example.ui.settings.SettingsFragment;
 import com.example.ui.statistics.StatsFragment;
 import com.google.android.material.navigation.NavigationBarView;
@@ -42,6 +43,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         repository = TrackingRepository.getInstance(this);
 
+        com.example.ui.settings.SmartTrackingFragment.preloadApps(this);
+
         binding.bottomNavigation.setOnItemSelectedListener(this);
 
         // Check and request notification permission for Android 13+
@@ -49,10 +52,15 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         // Observe active session to sync with foreground service
         repository.getActiveSession().observe(this, activeSession -> {
+            com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(this);
             if (activeSession != null && activeSession.isActive()) {
                 TrackingService.startTracking(this, activeSession.getActivityName());
             } else {
-                TrackingService.stopTracking(this);
+                if (smart.isEnabled()) {
+                    TrackingService.startTracking(this, "Smart Tracking");
+                } else {
+                    TrackingService.stopTracking(this);
+                }
             }
         });
 
@@ -106,6 +114,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         } else if (itemId == R.id.nav_stats) {
             showFragment(new StatsFragment(), "FRAGMENT_STATS");
             return true;
+        } else if (itemId == R.id.nav_progress) {
+            showFragment(new TrackProgressFragment(), "FRAGMENT_PROGRESS");
+            return true;
         }
         return false;
     }
@@ -118,9 +129,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         binding.bottomNavigation.setSelectedItemId(R.id.nav_activities);
     }
 
+    public void navigateToProgress() {
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_progress);
+    }
+
     public void navigateToSettings() {
         currentNavId = -1;
         showFragment(new SettingsFragment(), "FRAGMENT_SETTINGS");
+    }
+
+    public void navigateToSmartTracking() {
+        currentNavId = -1;
+        showFragment(new com.example.ui.settings.SmartTrackingFragment(), "FRAGMENT_SMART_TRACKING");
     }
 
     public void navigateToHome() {
@@ -147,6 +167,22 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             dialog.dismiss();
             navigateToActivities();
         });
+
+        android.view.View menuProgress = sheetView.findViewById(R.id.menu_item_progress);
+        if (menuProgress != null) {
+            menuProgress.setOnClickListener(v -> {
+                dialog.dismiss();
+                navigateToProgress();
+            });
+        }
+
+        android.view.View menuSmartTracking = sheetView.findViewById(R.id.menu_item_smart_tracking);
+        if (menuSmartTracking != null) {
+            menuSmartTracking.setOnClickListener(v -> {
+                dialog.dismiss();
+                navigateToSmartTracking();
+            });
+        }
 
         sheetView.findViewById(R.id.menu_item_settings).setOnClickListener(v -> {
             dialog.dismiss();

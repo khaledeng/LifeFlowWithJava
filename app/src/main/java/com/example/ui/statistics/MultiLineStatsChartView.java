@@ -54,7 +54,7 @@ public class MultiLineStatsChartView extends View {
 
     private Long highlightedActivityId = null; // null = show all, or specific ID
 
-    // Paints
+    // Reusable Paints, Paths, and Rects for zero-allocation onDraw
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint axisTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -62,6 +62,11 @@ public class MultiLineStatsChartView extends View {
     private final Paint pointInnerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltipBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tooltipTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint cursorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tipStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path gridPath = new Path();
+    private final Path linePath = new Path();
+    private final RectF tipRect = new RectF();
 
     // Touch selection & gestures
     public interface OnPeriodSwipeListener {
@@ -123,6 +128,14 @@ public class MultiLineStatsChartView extends View {
         tooltipTextPaint.setTextSize(sp(12f));
         tooltipTextPaint.setTextAlign(Paint.Align.CENTER);
         tooltipTextPaint.setFakeBoldText(true);
+
+        cursorPaint.setColor(Color.WHITE);
+        cursorPaint.setAlpha(120);
+        cursorPaint.setStrokeWidth(dp(1.5f));
+        cursorPaint.setPathEffect(new DashPathEffect(new float[]{dp(3f), dp(3f)}, 0));
+
+        tipStrokePaint.setStyle(Paint.Style.STROKE);
+        tipStrokePaint.setStrokeWidth(dp(1.5f));
     }
 
     public void setData(List<Series> newSeries, String[] labels) {
@@ -226,7 +239,7 @@ public class MultiLineStatsChartView extends View {
             canvas.drawText(label, paddingLeft - dp(6f), y + dp(4f), axisTextPaint);
 
             // Grid Line
-            Path gridPath = new Path();
+            gridPath.reset();
             gridPath.moveTo(paddingLeft, y);
             gridPath.lineTo(width - paddingRight, y);
             canvas.drawPath(gridPath, gridPaint);
@@ -269,13 +282,13 @@ public class MultiLineStatsChartView extends View {
 
             for (int i = 0; i <= lastValidIndex; i++) {
                 ptsX[i] = paddingLeft + ((float) i / Math.max(1, numPoints - 1)) * chartWidth;
-                float val = s.values[i];
+                float val = (i < s.values.length) ? s.values[i] : 0f;
                 float clampedVal = Math.max(0, Math.min(val, maxYValue));
                 ptsY[i] = paddingTop + chartHeight - ((clampedVal / maxYValue) * chartHeight);
             }
 
             // Construct smooth Bezier curve path
-            Path linePath = new Path();
+            linePath.reset();
             linePath.moveTo(ptsX[0], ptsY[0]);
 
             for (int i = 0; i < lastValidIndex; i++) {
@@ -321,11 +334,6 @@ public class MultiLineStatsChartView extends View {
             float tx = paddingLeft + ((float) selectedIndex / Math.max(1, numPoints - 1)) * chartWidth;
 
             // Draw vertical dashed cursor line
-            Paint cursorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            cursorPaint.setColor(Color.WHITE);
-            cursorPaint.setAlpha(120);
-            cursorPaint.setStrokeWidth(dp(1.5f));
-            cursorPaint.setPathEffect(new DashPathEffect(new float[]{dp(3f), dp(3f)}, 0));
             canvas.drawLine(tx, paddingTop, tx, paddingTop + chartHeight, cursorPaint);
 
             // Tooltip box
@@ -334,15 +342,15 @@ public class MultiLineStatsChartView extends View {
             String durationStr = "0m";
             int tipColor = Color.WHITE;
 
-            if (selectedSeries != null && selectedIndex < selectedSeries.values.length) {
+            if (selectedSeries != null && selectedSeries.values != null && selectedIndex < selectedSeries.values.length) {
                 float v = selectedSeries.values[selectedIndex]; if (v < 0) v = 0f;
-                seriesName = selectedSeries.name;
+                seriesName = selectedSeries.name != null ? selectedSeries.name : "";
                 durationStr = formatDuration(v);
                 tipColor = selectedSeries.color;
             } else if (!seriesList.isEmpty()) {
                 Series topSeries = seriesList.get(0);
-                float v = (selectedIndex < topSeries.values.length) ? topSeries.values[selectedIndex] : 0f; if (v < 0) v = 0f;
-                seriesName = topSeries.name;
+                float v = (topSeries.values != null && selectedIndex < topSeries.values.length) ? topSeries.values[selectedIndex] : 0f; if (v < 0) v = 0f;
+                seriesName = topSeries.name != null ? topSeries.name : "";
                 durationStr = formatDuration(v);
                 tipColor = topSeries.color;
             }
@@ -356,15 +364,12 @@ public class MultiLineStatsChartView extends View {
             float boxLeft = Math.max(dp(8f), Math.min(width - boxWidth - dp(8f), tx - (boxWidth / 2f)));
             float boxTop = paddingTop - dp(12f);
 
-            RectF tipRect = new RectF(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight);
+            tipRect.set(boxLeft, boxTop, boxLeft + boxWidth, boxTop + boxHeight);
             canvas.drawRoundRect(tipRect, dp(8f), dp(8f), tooltipBgPaint);
 
             // Border for tooltip in active color
-            Paint tipStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-            tipStroke.setStyle(Paint.Style.STROKE);
-            tipStroke.setColor(tipColor);
-            tipStroke.setStrokeWidth(dp(1.5f));
-            canvas.drawRoundRect(tipRect, dp(8f), dp(8f), tipStroke);
+            tipStrokePaint.setColor(tipColor);
+            canvas.drawRoundRect(tipRect, dp(8f), dp(8f), tipStrokePaint);
 
             canvas.drawText(fullText, tipRect.centerX(), tipRect.centerY() + dp(4f), tooltipTextPaint);
         }

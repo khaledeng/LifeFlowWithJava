@@ -1,7 +1,5 @@
 package com.example.ui.settings;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -9,7 +7,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -37,9 +34,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-/**
- * SettingsFragment provides controls for notifications, membership tier, JSON backup & restore, and local data reset.
- */
 public class SettingsFragment extends Fragment {
 
     private FragmentSettingsBinding binding;
@@ -103,15 +97,8 @@ public class SettingsFragment extends Fragment {
     }
 
     private void updateMembershipUI() {
-        if (subscriptionManager.isPro()) {
-            binding.tvMembershipStatus.setText(R.string.pro_tier_status);
-            binding.btnTogglePro.setText(R.string.downgrade_free_tier);
-            binding.btnTogglePro.setBackgroundColor(requireContext().getColor(R.color.secondary));
-        } else {
-            binding.tvMembershipStatus.setText(R.string.free_tier_status);
-            binding.btnTogglePro.setText(R.string.upgrade_pro_button);
-            binding.btnTogglePro.setBackgroundColor(requireContext().getColor(R.color.primary));
-        }
+        binding.tvMembershipStatus.setText(subscriptionManager.getProExpiryDetailsFormatted(requireContext()));
+        binding.btnTogglePro.setVisibility(View.GONE);
     }
 
     private void updateNotificationSwitchUI() {
@@ -127,11 +114,8 @@ public class SettingsFragment extends Fragment {
         });
 
         binding.btnTogglePro.setOnClickListener(v -> {
-            boolean current = subscriptionManager.isPro();
-            subscriptionManager.setPro(!current);
-            updateMembershipUI();
-            String msg = !current ? getString(R.string.pro_unlocked_toast) : getString(R.string.switched_free_tier_toast);
-            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
+            com.example.util.HapticHelper.performClick(v);
+            com.example.util.ActivationDialogHelper.showActivationCodeDialog(requireContext(), this::updateMembershipUI);
         });
 
         binding.switchNotifications.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -147,57 +131,37 @@ public class SettingsFragment extends Fragment {
 
         binding.cardLanguage.setOnClickListener(v -> toggleLanguage());
 
-        // Export JSON Backup
         binding.btnExportJson.setOnClickListener(v -> handleExportJson());
 
-        // Import JSON File: Opens phone file picker directly
         binding.btnImportJson.setOnClickListener(v -> {
             try {
-                importFileLauncher.launch("*/*");
+                openDocumentLauncher.launch(new String[]{"application/json", "application/octet-stream", "*/*"});
             } catch (Exception e1) {
                 try {
-                    openDocumentLauncher.launch(new String[]{"*/*", "application/json", "text/plain"});
+                    importFileLauncher.launch("application/json");
                 } catch (Exception e2) {
-                    Toast.makeText(requireContext(), getString(R.string.cannot_open_file_picker, e2.getMessage()), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "No file picker app found", Toast.LENGTH_SHORT).show();
                 }
             }
         });
-
-        binding.btnClearData.setOnClickListener(v -> {
-            new AlertDialog.Builder(requireContext())
-                    .setTitle(R.string.clear_data_button)
-                    .setMessage(R.string.clear_data_confirm)
-                    .setPositiveButton(R.string.reset_everything_button, (dialog, which) -> {
-                        repository.resetAllData(() -> {
-                            requireActivity().runOnUiThread(() -> {
-                                Toast.makeText(requireContext(), R.string.data_cleared_toast, Toast.LENGTH_SHORT).show();
-                            });
-                        });
-                    })
-                    .setNegativeButton(R.string.cancel_button, null)
-                    .show();
-        });
     }
-
-    // --- EXPORT JSON ---
 
     private void handleExportJson() {
         repository.exportDataToJson((json, error) -> {
             if (getActivity() == null) return;
             getActivity().runOnUiThread(() -> {
-                if (error != null || json == null) {
-                    Toast.makeText(requireContext(), getString(R.string.export_failed_toast, error != null ? error.getMessage() : "Unknown"), Toast.LENGTH_LONG).show();
+                if (json == null) {
+                    Toast.makeText(requireContext(), R.string.export_failed_toast, Toast.LENGTH_SHORT).show();
                     return;
                 }
-
                 pendingExportJson = json;
+
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US);
-                String fileName = "lifeflow_backup_" + sdf.format(new Date()) + ".json";
+                String fileName = "LifeFlowBackup_" + sdf.format(new Date()) + ".json";
 
                 try {
                     createDocumentLauncher.launch(fileName);
                 } catch (Exception e) {
-                    // Fallback to direct share intent if storage creator is unavailable
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("application/json");
                     shareIntent.putExtra(Intent.EXTRA_SUBJECT, "LifeFlow Backup JSON");
@@ -216,36 +180,36 @@ public class SettingsFragment extends Fragment {
                 Toast.makeText(requireContext(), R.string.export_success_toast, Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            Toast.makeText(requireContext(), getString(R.string.export_failed_toast, e.getMessage()), Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), getString(R.string.export_failed_toast, e.getMessage()), Toast.LENGTH_SHORT).show();
         }
     }
-
-    // --- IMPORT JSON ---
 
     private void readJsonFromUri(Uri uri) {
         try (InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
              BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
-                sb.append(line).append('\n');
+                stringBuilder.append(line);
             }
-            showImportConfirmDialog(sb.toString());
+            parseAndImportJson(stringBuilder.toString());
         } catch (Exception e) {
-            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, e.getMessage()), Toast.LENGTH_LONG).show();
+            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, "Error reading file"), Toast.LENGTH_LONG).show();
         }
     }
 
-    private void showImportConfirmDialog(String jsonString) {
+    private void parseAndImportJson(String jsonString) {
         try {
             JSONObject root = new JSONObject(jsonString);
-            JSONArray activities = root.optJSONArray("activities");
-            JSONArray sessions = root.optJSONArray("sessions");
+            JSONObject metadata = root.optJSONObject("metadata");
+            String dateInfo = metadata != null ? metadata.optString("exported_at", "Unknown") : "Unknown";
 
-            int actCount = activities != null ? activities.length() : 0;
-            int sessCount = sessions != null ? sessions.length() : 0;
+            JSONArray acts = root.optJSONArray("activities");
+            JSONArray sess = root.optJSONArray("sessions");
 
-            String dateInfo = root.optString("exportedDate", getString(R.string.backup_unknown_date));
+            int actCount = acts != null ? acts.length() : 0;
+            int sessCount = sess != null ? sess.length() : 0;
+
             String actStr = getResources().getQuantityString(R.plurals.plural_activities, actCount, actCount);
             String sessStr = getResources().getQuantityString(R.plurals.plural_sessions, sessCount, sessCount);
             String message = getString(R.string.backup_meta_prompt, dateInfo, actStr, sessStr);
@@ -266,7 +230,6 @@ public class SettingsFragment extends Fragment {
                     })
                     .setNegativeButton(R.string.cancel_button, null)
                     .show();
-
         } catch (Exception e) {
             Toast.makeText(requireContext(), getString(R.string.import_failed_toast, "Invalid JSON structure: " + e.getMessage()), Toast.LENGTH_LONG).show();
         }
@@ -293,4 +256,3 @@ public class SettingsFragment extends Fragment {
         binding = null;
     }
 }
-

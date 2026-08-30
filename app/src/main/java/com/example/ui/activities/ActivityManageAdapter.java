@@ -75,14 +75,14 @@ public class ActivityManageAdapter extends RecyclerView.Adapter<ActivityManageAd
         }
 
         void bind(Activity activity, OnActivityManageListener listener) {
-            binding.tvManageName.setText(activity.getName());
+            binding.tvManageName.setText(activity.getNameWithArrow());
 
             android.content.Context context = binding.getRoot().getContext();
             String categoryStr = "⚖️ " + context.getString(com.example.R.string.goal_normal);
             if (activity.getCategory() == com.example.data.entity.ActivityCategory.INCREASE) {
-                categoryStr = "📈 " + context.getString(com.example.R.string.goal_increase);
+                categoryStr = "↑ " + context.getString(com.example.R.string.goal_increase);
             } else if (activity.getCategory() == com.example.data.entity.ActivityCategory.DECREASE) {
-                categoryStr = "📉 " + context.getString(com.example.R.string.goal_decrease);
+                categoryStr = "↓ " + context.getString(com.example.R.string.goal_decrease);
             }
 
             if (activity.getExpectedHoursPerDay() > 0) {

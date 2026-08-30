@@ -32,7 +32,7 @@
 
     <!-- Activity Management Strings -->
     <string name="activities_subtitle">إدارة وتخصيص الألوان والأيقونات</string>
-    <string name="add_activity">+ إضافة نشاط جديد</string>
+    <string name="add_activity">إضافة نشاط جديد</string>
     <string name="edit_activity">تعديل النشاط</string>
     <string name="delete_activity">حذف النشاط</string>
     <string name="activity_name_label">اسم النشاط</string>
@@ -87,6 +87,7 @@
     <string name="clear_data_button">مسح جميع البيانات</string>
     <string name="about_title">حول التطبيق</string>
     <string name="version_info">الإصدار 1.0.0</string>
+    <string name="developer_credit">by Eng Khaled Ezzat</string>
 
     <!-- Notification Strings -->
     <string name="notification_channel_id">lifeflow_tracking_channel</string>
@@ -257,4 +258,160 @@
     <string name="target_exceeded_decrease">تجاوزت الحد بـ %1$s</string>
     <string name="target_remaining">متبقي %1$s من %2$s</string>
     <string name="goal_exceeds_24h_error">مجموع الأهداف اليومية لا يمكن أن يتجاوز 24 ساعة!</string>
+
+    <!-- Progress & Streak Screen -->
+    <string name="nav_progress">تتبع التقدم</string>
+    <string name="track_progress_title">تتبع التقدم</string>
+    <string name="track_progress_subtitle">استمرار العادات والإنجاز اليومي</string>
+    <string name="burger_menu_desc">القائمة الجانبية</string>
+    <string name="select_activity_label">اختر النشاط</string>
+    <string name="current_streak_label">الستريك الحالي</string>
+    <string name="longest_streak_label">أطول ستريك</string>
+    <string name="daily_target_label">الهدف اليومي</string>
+    <string name="monthly_goal_label">الهدف الشهري</string>
+    <string name="weekly_goal_label">الهدف الأسبوعي</string>
+    <string name="daily_goal_label">الهدف اليومي</string>
+    <string name="completion_rate_label">الهدف الشهري</string>
+    <string name="tab_monthly">شهري</string>
+    <string name="tab_weekly">أسبوعي</string>
+    <string name="tab_daily">يومي</string>
+    <string name="btn_today">اليوم</string>
+    <string name="day_sat_short">سبت</string>
+    <string name="day_sun_short">أحد</string>
+    <string name="day_mon_short">إثنين</string>
+    <string name="day_tue_short">ثلاثاء</string>
+    <string name="day_wed_short">أربعاء</string>
+    <string name="day_thu_short">خميس</string>
+    <string name="day_fri_short">جمعة</string>
+    <string name="legend_100">100% مكتمل</string>
+    <string name="legend_partial_green">&gt;= 50%</string>
+    <string name="legend_partial_orange">&lt; 50%</string>
+    <string name="target_label_suffix">الهدف</string>
+    <string name="status_achieved">تم الوصول للهدف (100%)</string>
+    <string name="status_on_track">في المسار الصحيح</string>
+    <string name="status_in_progress">يحتاج تركيز</string>
+    <string name="status_not_tracked">لم يسجل وقت</string>
+    <string name="status_not_started">لم يبدأ بعد</string>
+    <string name="status_upcoming">يوم قادم</string>
+    <string name="note_future_day">يوم قادم. استعد لتحقيق أهدافك!</string>
+    <string name="note_streak_maintained">🔥 حافظت على الستريك! التزام رائع ومستمر.</string>
+    <string name="note_good_progress">📈 تقدم ممتاز! أنجزت أكثر من نصف هدفك اليومي.</string>
+    <string name="note_needs_focus">⚡ أقل من 50% حتى الآن. جلسة تركيز سريعة ستبقيك على المسار!</string>
+    <string name="note_needs_focus_past">لم يكتمل الهدف في هذا اليوم (تم إنجاز أقل من 50%).</string>
+    <string name="note_no_activity_logged">لم يتم تسجيل أي وقت لهذا اليوم حتى الآن.</string>
+    <string name="unit_days">أيام</string>
+    <string name="unit_day">يوم</string>
+    <string name="no_target_set">بدون هدف</string>
+    <string name="week_title_prefix">الأسبوع</string>
+    <string name="of_daily_target_prefix">من أصل</string>
+    <string name="subtext_consecutive_days">أيام متتالية</string>
+    <string name="subtext_best_record">الرقم القياسي</string>
+    <string name="subtext_per_day">الهدف لكل يوم</string>
+    <string name="daily_legend_text" formatted="false">✓ 100% إنجاز  ·  أخضر 50% فأكثر  ·  برتقالي أقل من 50%</string>
+    <string name="legend_increase_summary" formatted="false">✓ 100% إنجاز  ·  أخضر 50% فأكثر  ·  برتقالي أقل من 50%</string>
+    <string name="legend_decrease_summary" formatted="false">أخضر 0%–90% (آمن)  ·  برتقالي 91%–99%  ·  ✕ 100%+ كسر الحد</string>
+    <string name="legend_decrease_safe" formatted="false">0%–90% آمن</string>
+    <string name="legend_decrease_warning" formatted="false">91%–99% تنبيه</string>
+    <string name="legend_decrease_danger" formatted="false">91%–99% تنبيه</string>
+    <string name="legend_decrease_exceeded" formatted="false">100%+ كسر الحد</string>
+    <string name="this_week_title">هذا الأسبوع</string>
+    <string name="last_week_title">الأسبوع اللي فات</string>
+    <string name="status_limit_exceeded" formatted="false">تجاوز الحد اليومي (100%+)</string>
+    <string name="status_danger_limit" formatted="false">اقتراب من الحد (91%–99%)</string>
+    <string name="note_limit_exceeded">تم كسر وتجاوز الحد اليومي المحدد لهذا النشاط.</string>
+    <string name="note_decrease_zero_success">ممتاز! لم تستهلك أي وقت اليوم، الحفاظ على الهدف 100%.</string>
+    <string name="note_decrease_under_limit">أداء رائع في الحفاظ على وقتك تحت الحد المسموح.</string>
+    <string name="note_decrease_warning_near_limit">⚠️ انتبه! لقد اقتربت من الحد الأقصى المسموح لهذا النشاط اليوم.</string>
+
+    <!-- Activation & Subscription Strings -->
+    <string name="activate_code_dialog_title">تفعيل اشتراك Pro 👑</string>
+    <string name="activate_code_dialog_subtitle">أدخل كود التفعيل الخاص بك لفتح عدد لا محدود من الأنشطة والمميزات.</string>
+    <string name="activation_code_hint">مثال: PRO30-K7B9X2-A4F1</string>
+    <string name="btn_activate_now">تفعيل الاشتراك الآن</string>
+    <string name="btn_admin_code_generator">مولد الأكواد (للإدارة)</string>
+    <string name="admin_pin_dialog_title">حماية الإدارة 🔒</string>
+    <string name="admin_pin_dialog_subtitle">أدخل رمز مسؤول التطبيق لدخول مولد الأكواد (الرمز الافتراضي: 8899):</string>
+    <string name="admin_pin_hint">رمز المسؤول (مثال: 8899)</string>
+    <string name="btn_verify_pin">تأكيد الرمز</string>
+    <string name="msg_invalid_admin_pin">رمز المسؤول غير صحيح!</string>
+    <string name="admin_generator_title">مولد أكواد التفعيل (للإدارة) 🛠️</string>
+    <string name="admin_generator_subtitle">إنشاء أكواد تفعيل صالحة لإرسالها للعملاء حسب مدة الاشتراك.</string>
+    <string name="select_code_duration">اختر مدة الاشتراك:</string>
+    <string name="duration_30_days">30 يوم (شهري)</string>
+    <string name="duration_365_days">365 يوم (سنوي)</string>
+    <string name="duration_lifetime">اشتراك دائم</string>
+    <string name="btn_generate_new_code">إنشاء كود جديد</string>
+    <string name="generated_code_label">كود التفعيل المنشأ:</string>
+    <string name="btn_copy_code">نسخ الكود</string>
+    <string name="close_button">إغلاق</string>
+    <string name="matrix_card_title">مصفوفة إنجاز الأنشطة الشهرية 📊</string>
+    <string name="matrix_card_subtitle">معدل التزام، جوائز، وسلسلة كافة الأنشطة خلال الشهر</string>
+    <string name="toast_code_copied">تم نسخ الكود إلى الحافظة بنجاح!</string>
+    <string name="msg_invalid_code">كود التفعيل غير صحيح، يرجى التأكد وإعادة المحاولة.</string>
+    <string name="msg_code_already_used">تم استخدام كود التفعيل هذا مسبقاً على هذا الجهاز.</string>
+    <string name="msg_activation_success_monthly">🎉 تم تفعيل الاشتراك الشهري بنجاح لمدة 30 يوماً!</string>
+    <string name="msg_activation_success_yearly">🎉 تم تفعيل الاشتراك السنوي بنجاح لمدة 365 يوماً!</string>
+    <string name="msg_activation_success_lifetime">🎉 تم تفعيل الاشتراك الدائم بنجاح!</string>
+    <string name="btn_enter_activation_code">إدخال كود التفعيل</string>
+    <string name="two_weeks_ago_title">قبل أسبوعين</string>
+    <string name="first_week_month_title">أول أسبوع الشهر</string>
+    <string name="weeks_ago_format" formatted="false">قبل %d أسابيع</string>
+    <string name="next_week_title">الأسبوع القادم</string>
+    <string name="weeks_later_format" formatted="false">بعد %d أسابيع</string>
+    <string name="smart_tracking_settings_error">لا يمكن فتح شاشة الإعدادات</string>
+    <string name="link_apps_title_format" formatted="false">ربط تطبيقات: %s</string>
+    <string name="loading_apps_list">جاري تحميل قائمة التطبيقات...</string>
+    <string name="selected_count_format" formatted="false">تم تحديد %d تطبيق</string>
+    <string name="group_added_toast_format" formatted="false">تم إضافة تطبيقات مجموعة %s</string>
+    <string name="group_removed_toast_format" formatted="false">تمت إزالة تطبيقات مجموعة %s</string>
+    <string name="saved_success">تم الحفظ</string>
+    <string name="delete_group_dialog_title">حذف المجموعة</string>
+    <string name="delete_group_dialog_message">هل أنت متأكد من حذف هذه المجموعة؟</string>
+    <string name="apps_count_suffix" formatted="false">%d تطبيقات</string>
+    <string name="nav_smart_tracking">التتبع الذكي</string>
+    <string name="smart_tracking_enable">تفعيل التتبع الذكي</string>
+    <string name="smart_tracking_auto_switch">التبديل التلقائي بين الأنشطة</string>
+    <string name="smart_tracking_permission_warning">⚠️ إذن الوصول مفقود! اضغط هنا لتفعيل إذن (Usage Access) ليعمل التتبع التلقائي للتطبيقات.</string>
+    <string name="smart_tracking_activities_settings">إعدادات الأنشطة</string>
+    <string name="smart_tracking_manage_groups">إدارة مجموعات التطبيقات</string>
+    <string name="smart_tracking_manage_groups_desc">إنشاء وتعديل مجموعات التطبيقات لسهولة ربطها</string>
+    <string name="smart_tracking_default_time">الوقت الافتراضي:</string>
+    <string name="smart_tracking_time_from" formatted="false">من: %s</string>
+    <string name="smart_tracking_time_to" formatted="false">إلى: %s</string>
+    <string name="smart_tracking_link_app">ربط تطبيق</string>
+    <string name="smart_tracking_no_app_selected">لم يتم تحديد تطبيق</string>
+    <string name="smart_tracking_bound_to_format" formatted="false">مرتبط بـ: %s</string>
+    <string name="smart_tracking_bound_to_count_format" formatted="false">مرتبط بـ %d تطبيقات</string>
+    <string name="group_name_title">اسم المجموعة</string>
+    <string name="group_name_hint">مثال: تطبيقات العمل</string>
+    <string name="btn_continue">متابعة</string>
+    <string name="app_groups_title">مجموعات التطبيقات</string>
+    <string name="btn_add_new_group">إضافة مجموعة جديدة</string>
+    <string name="group_edit_apps_hint">اضغط لتعديل التطبيقات</string>
+    <string name="default_group_social">وسائل التواصل</string>
+    <string name="default_group_games">الألعاب</string>
+    <string name="btn_groups">المجموعات</string>
+    <string name="search_app_hint">ابحث عن تطبيق...</string>
+    <string name="smart_tracking_set_default">تعيين كأساسي</string>
+    <string name="smart_tracking_is_default">النشاط الأساسي ✓</string>
+    <string name="smart_tracking_default_set_toast_format" formatted="false">تم تعيين \"%s\" كالنشاط الأساسي</string>
+    <string name="smart_tracking_default_cleared_toast">تم إلغاء النشاط الأساسي</string>
+    <string name="smart_tracking_lock_limit">قفل بعد نهاية الوقت</string>
+    <string name="smart_tracking_lock_active">قفل عند الانتهاء ✓</string>
+    <string name="smart_tracking_lock_enabled_toast_format" formatted="false">تم تفعيل قفل التطبيقات بعد انتهاء الوقت لـ \"%s\"</string>
+    <string name="smart_tracking_lock_disabled_toast_format" formatted="false">تم إيقاف قفل التطبيقات لـ \"%s\"</string>
+    <string name="app_blocker_title">تم استهلاك الوقت اليومي</string>
+    <string name="app_blocker_consumed_format" formatted="false">استُهلك الوقت اليومي لـ %s</string>
+    <string name="app_blocker_motivation">استغل وقتك في شيء آخر!</string>
+    <string name="app_blocker_btn_home">العودة للشاشة الرئيسية</string>
+    <string name="app_blocker_tracked_vs_target" formatted="false">المستهلك: %1$s / الهدف: %2$s</string>
+    <string name="smart_tracking_overlay_warning">⚠️ إذن الظهور فوق التطبيقات مفقود! اضغط هنا لتفعيل إذن (Display over apps) لتظهر شاشة الحظر فوراً عند فتح التطبيقات المقفلة.</string>
+    <string name="app_lock_notification_title" formatted="false">⚠️ نشاط %s مقفل</string>
+    <string name="app_lock_notification_text">تم استهلاك الحد اليومي لهذا النشاط بالكامل.</string>
+    <string name="banner_permission_usage_title">⚠️ إذن تتبع استخدام التطبيقات مفقود</string>
+    <string name="banner_permission_usage_desc">اضغط هنا لمنح إذن الوصول للاستخدام لاكتشاف التطبيقات المفتوحة وقفلها تلقائياً.</string>
+    <string name="banner_permission_overlay_title">⚠️ إذن الظهور فوق التطبيقات مفقود</string>
+    <string name="banner_permission_overlay_desc">اضغط هنا لتفعيل إذن الظهور فوق التطبيقات لتظهر شاشة الحظر وتمنع التطبيقات فوراً.</string>
+    <string name="banner_permission_notif_title">⚠️ إذن الإشعارات مفقود</string>
+    <string name="banner_permission_notif_desc">اضغط هنا لتفعيل الإشعارات لضمان استمرار الخدمة في الخلفية.</string>
 </resources>

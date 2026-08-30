@@ -63,9 +63,9 @@ public abstract class AppDatabase extends RoomDatabase {
                     if (dao.getActivityCountSync() == 0) {
                         List<Activity> defaults = new ArrayList<>();
                         long now = System.currentTimeMillis();
-                        defaults.add(new Activity("Work 💸", com.example.data.entity.ActivityCategory.INCREASE, 8f, "#39D353", "ic_work", true, now));
-                        defaults.add(new Activity("Sleep 😴", com.example.data.entity.ActivityCategory.NEUTRAL, 8f, "#8A80E6", "ic_sleep", true, now + 1));
-                        defaults.add(new Activity("Entertainment 🥳", com.example.data.entity.ActivityCategory.DECREASE, 8f, "#FF8C42", "ic_entertainment", true, now + 2));
+                        defaults.add(new Activity("Work", com.example.data.entity.ActivityCategory.INCREASE, 8f, "#39D353", "ic_work", true, now));
+                        defaults.add(new Activity("Sleep", com.example.data.entity.ActivityCategory.NEUTRAL, 8f, "#8A80E6", "ic_sleep", true, now + 1));
+                        defaults.add(new Activity("Entertainment", com.example.data.entity.ActivityCategory.DECREASE, 8f, "#FF8C42", "ic_entertainment", true, now + 2));
                         dao.insertAll(defaults);
                     }
                 }

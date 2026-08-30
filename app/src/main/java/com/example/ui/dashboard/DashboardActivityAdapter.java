@@ -276,7 +276,7 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
 
         void bind(Activity activity, boolean isActive, long displayMillis, OnActivityActionListener listener) {
             this.currentActivity = activity;
-            String displayName = activity.getName();
+            String displayName = activity.getNameWithArrow();
             binding.tvActivityName.setText(displayName);
 
             int activityColor = IconHelper.parseColorOrDefault(activity.getColorHex(), Color.parseColor("#39D353"));

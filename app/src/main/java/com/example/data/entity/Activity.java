@@ -58,6 +58,17 @@ public class Activity {
         this.id = id;
     }
 
+    public String getNameWithArrow() {
+        if (name == null) return "";
+        ActivityCategory cat = getCategory();
+        if (cat == ActivityCategory.INCREASE) {
+            return name + " ↑";
+        } else if (cat == ActivityCategory.DECREASE) {
+            return name + " ↓";
+        }
+        return name;
+    }
+
     public String getName() {
         return name;
     }

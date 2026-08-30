@@ -43,6 +43,7 @@ public class TrackingService extends Service {
     private static final int NOTIFICATION_ID = 1001;
 
     private final Handler tickerHandler = new Handler(Looper.getMainLooper());
+    private final Handler smartCheckHandler = new Handler(Looper.getMainLooper());
     private boolean isTracking = false;
     private TrackingRepository repository;
     private AppDatabase database;
@@ -56,6 +57,62 @@ public class TrackingService extends Service {
             }
         }
     };
+
+    private final Runnable smartCheckRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isTracking) {
+                checkSmartTracking();
+                smartCheckHandler.postDelayed(this, 300);
+            }
+        }
+    };
+
+    private static String lastSmartTargetName = null;
+    
+    private void checkSmartTracking() {
+        final com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(this);
+        if (!smart.isEnabled()) {
+            lastSmartTargetName = null;
+            return;
+        }
+
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                java.util.List<com.example.data.entity.Activity> allActivities = database.activityDao().getAllActivitiesSync();
+                if (allActivities == null || allActivities.isEmpty()) return;
+
+                String targetName = smart.determineTargetActivityName(this, allActivities, database.sessionDao());
+                if (targetName == null) return;
+                
+                com.example.data.entity.SessionEntity active = database.sessionDao().getActiveSessionSync();
+                if (active != null && active.isActive() && active.getActivityName() != null && active.getActivityName().trim().equalsIgnoreCase(targetName.trim())) {
+                    lastSmartTargetName = targetName;
+                    return;
+                }
+                
+                lastSmartTargetName = targetName;
+                    
+                    long targetId = -1;
+                    for (com.example.data.entity.Activity act : allActivities) {
+                        if (act.getName() != null && act.getName().trim().equalsIgnoreCase(targetName.trim())) {
+                            targetId = act.getId();
+                            break;
+                        }
+                    }
+
+                    if (targetId != -1) {
+                        repository.startActivity(targetId, true, () -> {
+                            tickerHandler.post(() -> {
+                                updateNotificationContent();
+                                android.content.Intent broadcast = new android.content.Intent("com.example.ACTION_SMART_TRACKING_UPDATED");
+                                sendBroadcast(broadcast);
+                            });
+                        });
+                    }
+            } catch (Exception e) { }
+        });
+    }
 
     public static void startTracking(Context context, String activityName) {
         Intent intent = new Intent(context, TrackingService.class);
@@ -94,22 +151,37 @@ public class TrackingService extends Service {
             if (activityName == null || activityName.isEmpty()) {
                 activityName = "Active Tracking";
             }
-            SubscriptionManager sub = new SubscriptionManager(this);
-            if (sub.isNotificationsEnabled()) {
-                isTracking = true;
-                Notification initialNotification = buildNotification(activityName, "Today: 00:00:00 - 0.0% of day");
+            isTracking = true;
+            Notification initialNotification = buildNotification(activityName, "Today: 00:00:00 - 0.0% of day");
+            try {
                 startForeground(NOTIFICATION_ID, initialNotification);
-
-                tickerHandler.removeCallbacks(tickerRunnable);
-                tickerHandler.post(tickerRunnable);
+            } catch (Exception e) {
+                android.util.Log.e("TrackingService", "Failed to start foreground service", e);
             }
+
+            tickerHandler.removeCallbacks(tickerRunnable);
+            tickerHandler.post(tickerRunnable);
+
+            smartCheckHandler.removeCallbacks(smartCheckRunnable);
+            smartCheckHandler.post(smartCheckRunnable);
+            
+            checkSmartTracking();
+        } else if ("UPDATE_SMART_TRACKING".equals(action)) {
+            isTracking = true;
+            smartCheckHandler.removeCallbacks(smartCheckRunnable);
+            smartCheckHandler.post(smartCheckRunnable);
+            checkSmartTracking();
+            updateNotificationContent();
         } else if (ACTION_STOP.equals(action)) {
             isTracking = false;
             tickerHandler.removeCallbacks(tickerRunnable);
-            repository.stopActiveSession(() -> {
+            smartCheckHandler.removeCallbacks(smartCheckRunnable);
+            repository.stopActiveSession(false, () -> {
                 // Done stopping
             });
-            stopForeground(true);
+            try {
+                stopForeground(true);
+            } catch (Exception ignored) {}
             stopSelf();
         } else if (ACTION_PREV_GOAL.equals(action)) {
             isTracking = true;
@@ -131,6 +203,20 @@ public class TrackingService extends Service {
             SessionEntity activeSession = sessionDao.getActiveSessionSync();
 
             if (activeSession == null || !activeSession.isActive()) {
+                com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(TrackingService.this);
+                if (smart.isEnabled()) {
+                    checkSmartTracking();
+                    android.app.Notification standby = buildNotification("الذكاء نشط (في وضع الانتظار)", "في انتظار التغيير التلقائي للتطبيق...", "ic_other", 0xFFAAAAAA);
+                    android.app.NotificationManager manager = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    if (manager != null) manager.notify(NOTIFICATION_ID, standby);
+                    return;
+                }
+                isTracking = false;
+                tickerHandler.removeCallbacks(tickerRunnable);
+                try {
+                    stopForeground(true);
+                } catch (Exception ignored) {}
+                stopSelf();
                 return;
             }
 
@@ -280,6 +366,7 @@ public class TrackingService extends Service {
     public void onDestroy() {
         isTracking = false;
         tickerHandler.removeCallbacks(tickerRunnable);
+        smartCheckHandler.removeCallbacks(smartCheckRunnable);
         super.onDestroy();
     }
 
