@@ -11,10 +11,10 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 <p align="center">
-  <b>A modern, privacy-focused, and intelligent time-tracking application built with Native Android (Java + Jetpack). Designed to help you track habits, manage daily routines, analyze personal productivity with dynamic multi-line analytics, and achieve balanced living.</b>
+  <b>A modern, privacy-focused, and intelligent automated time-tracking & habit management system for Android. Designed to help you track habits, automate routine switching, enforce app limits with an instant system blocker, analyze personal productivity with dynamic multi-line analytics, and achieve balanced living.</b>
 </p>
 
-[Key Features](#-key-features) • [Screenshots & Visuals](#-screenshots--features-overview) • [Architecture](#-architecture--tech-stack) • [Installation](#-installation--setup) • [Author & License](#-author--contributions)
+[Key Features](#-key-features) • [Smart Tracking Engine](#-smart-automated-tracking--app-blocking-engine) • [Screenshots & Visuals](#-screenshots--features-overview) • [Architecture](#-architecture--tech-stack) • [Installation](#-installation--setup) • [Author & License](#-author--contributions)
 
 </div>
 
@@ -22,62 +22,74 @@
 
 ## 📱 About The Project
 
-**LifeFlow** is a comprehensive personal activity and productivity tracker developed for Android. It eliminates chaotic time management by providing real-time tracking, background session monitoring via persistent foreground services, intelligent habit goals (Increase / Routine / Limit), and interactive multi-line charts with fully dynamic time scaling.
+**LifeFlow** is a comprehensive, offline-first personal activity and productivity tracker for Android. It eliminates manual tracking fatigue by introducing an **Intelligent Automated Tracking Engine** that seamlessly switches timers based on active foreground apps, hourly routine schedules, and default fallback activities.
 
-Whether you're building a study streak, balancing work hours, or curbing screen time, LifeFlow offers an intuitive, offline-first experience with zero ads and complete data ownership.
+Whether you're building study habits, curbing distracting screen time with hardware-level overlay blocking, or inspecting your long-term focus trends through high-precision Bézier spline graphs, LifeFlow delivers an intuitive, private, and customizable experience.
 
 ---
 
 ## ✨ Key Features
 
-### ⏱️ 1. Real-Time Tracking & Persistent Background Service
-- **One-Tap Instant Tracking:** Start, switch, or pause any activity with immediate visual feedback.
-- **Active Session Stopwatch:** Glowing, live-updating timer card showing elapsed time and progress towards daily goals.
-- **Foreground Notification Service:** Track sessions even when the app is closed or the screen is locked, with quick action buttons directly in the notification shade.
+### 🧠 1. Smart Automated Tracking & App Lock Engine
+- **Three-Tier Priority Architecture:**
+  1. 🥇 **Foreground App Binding (Highest Priority):** Automatically switches tracking to the bound activity when launching specific apps (e.g., launching TikTok immediately switches to *Social Media*).
+  2. 🥈 **Hourly Routine Scheduling:** Automatically switches to scheduled routines (e.g., *Sleep* from 10:00 PM to 7:00 AM, or *Deep Work* during work hours) when no prioritized app is running.
+  3. 🥉 **Default Fallback Activity:** Automatically logs leftover unassigned time to a default catch-all bucket (e.g., *Make Time* / *Daily Routine*).
+- **Instant System Overlay App Blocker (`AppBlockerManager`):**
+  - Displays a high-priority system overlay window (`TYPE_APPLICATION_OVERLAY`) over restricted applications when daily time budgets are exhausted or strict lock is enabled.
+  - Automatically redirects users back to the home launcher to prevent distraction and doom-scrolling.
+- **Interactive Permission Status Banners:** Proactively alerts users on the dashboard to easily grant *Usage Access*, *Display Over Other Apps*, and *Notification* permissions with one tap.
 
 ---
 
-### 📊 2. Dynamic Multi-Line Analytics & Deep Insights
+### ⏱️ 2. Real-Time Tracking & Persistent Background Service
+- **One-Tap Instant Tracking:** Start, switch, or pause any activity with immediate visual feedback.
+- **Active Session Stopwatch:** Live glowing timer card displaying elapsed time, session progress, and target goals.
+- **Persistent Foreground Notification Service (`TrackingService`):** Maintains accurate tracking even when the app is closed, battery optimized, or the screen is locked, with quick action controls in the notification tray.
+
+---
+
+### 📊 3. Dynamic Multi-Line Analytics & Deep Insights
 - **Adaptive Canvas Spline Chart (`MultiLineStatsChartView`):** Custom high-performance 2D canvas drawing with smooth Bézier curve rendering.
 - **100% Dynamic Scaling (X & Y Axes):**
-  - **Dynamic Y-Axis:** Automatically scales from small 5–15 minute sessions up to 24-hour overviews so that short sessions remain prominent and easily visible.
+  - **Dynamic Y-Axis:** Automatically scales from small 5–15 minute sessions up to 24-hour overviews so short sessions remain clear and scannable.
   - **Dynamic X-Axis:** Adapts to the current time of day for high-resolution morning/afternoon tracking.
-- **Period Switcher:** Analyze data across **Day**, **Yesterday**, **Week**, **Month**, and **Year** with smooth navigation arrows.
+- **Flexible Period Filtering:** Inspect data across **Day**, **Yesterday**, **Week**, **Month**, and **Year** with smooth navigation controls.
 - **Interactive Legend Chips:** Tap any category chip to isolate and highlight its trend curve on the graph.
-- **Interactive Touch Tooltips:** Touch any point on the chart to inspect precise durations and timestamp breakdowns.
+- **Touch-Sensitive Tooltips:** Touch any coordinate on the chart to inspect precise durations and timestamp breakdowns.
 
 ---
 
-### 🎯 3. Smart Habit Goals & Milestone Engine
+### 🎯 4. Smart Habit Goals & Milestone Engine
 - **Three Strategic Goal Types:**
   - 📈 **Increase (Habit Building):** Stay motivated with milestone celebrations (25%, 50%, 75%, 100%).
   - ⚖️ **Normal (Routine Tracking):** Neutral monitoring for standard daily tasks.
-  - 📉 **Decrease (Time Limit / Budget):** Set caps for distractions and get warning alerts when approaching limits.
+  - 📉 **Decrease (Time Limit / Budget):** Set caps for distractions and get warning alerts or enforce instant app locks when limits are exceeded.
 - **24-Hour Safety Validation:** Intelligent constraint engine preventing total daily goals from exceeding 24 hours.
 
 ---
 
-### 🎨 4. Custom Activity Management
+### 🎨 5. Custom Activity Management
 - **Rich Icon & Emoji Picker:** Choose from dozens of categorized vector icons and expressive emojis.
 - **Vibrant Color Palette:** Assign custom hex colors for distinct visual recognition across charts and cards.
-- **Tier Management:** Modular architecture supporting both standard and unlocked Pro tiers.
+- **App & Group Binding:** Bind single apps or entire app groups directly to any activity.
 
 ---
 
-### ✏️ 5. Manual Time Adjustments
+### ✏️ 6. Manual Time Adjustments & Slices
 - **Quick Adjust:** Instant +/- 15 min and 30 min quick-adjustment buttons.
 - **Direct Log Editor:** Edit logged times for any historical period with strict period boundary checks.
 
 ---
 
-### 🔒 6. Privacy-First Storage & JSON Backup / Restore
+### 🔒 7. Privacy-First Storage & JSON Backup / Restore
 - **100% Offline & Private:** Powered by a local SQLite database through Android Room. No accounts required and no cloud tracking.
 - **JSON Export & Import:** Export full database backups as `.json` files.
 - **Dual Restore Modes:** Choose between **Merge with Existing Data** or **Complete Replacement**.
 
 ---
 
-### 🌐 7. Full Bilingual & RTL Localization
+### 🌐 8. Full Bilingual & RTL Localization
 - Complete native support for **Arabic (العربية)** and **English**.
 - Automatic RTL layout mirroring, Arabic numeral handling, and localized time units (`س / د` and `h / m`).
 
@@ -88,7 +100,7 @@ Whether you're building a study streak, balancing work hours, or curbing screen 
 <div align="center">
 
 ### 🌟 1. Live Dashboard & Real-Time Tracking
-*Intuitive dashboard with active stopwatch, categorized activities, and quick start controls.*
+*Intuitive dashboard with active stopwatch, categorized activities, permission banners, and quick start controls.*
 <br/>
 <img src="docs/assets/feature_dashboard.jpg" alt="Dashboard Screen" width="85%"/>
 
@@ -136,8 +148,8 @@ LifeFlow is built following modern Android architectural best practices (**MVVM 
                ▼                               ▼
 ┌──────────────────────────────┐ ┌────────────────────────────┐
 │      Local Persistence       │ │     Background Service     │
-│   Room Database (SQLite)     │ │ TrackingForegroundService  │
-│  ActivityDao & SessionDao    │ │ (Live Notification Action) │
+│   Room Database (SQLite)     │ │      TrackingService       │
+│  ActivityDao & SessionDao    │ │  & SmartTrackingManager    │
 └──────────────────────────────┘ └────────────────────────────┘
 ```
 
@@ -149,7 +161,7 @@ LifeFlow is built following modern Android architectural best practices (**MVVM 
 | **Architecture** | MVVM (Model-View-ViewModel) + Repository Pattern |
 | **Local Storage** | Android Jetpack Room (SQLite ORM) |
 | **UI Components** | Material Design 3 (M3), ViewBinding, Custom Canvas Views |
-| **Background Processing** | Foreground Service, Android Notifications API, Coroutines/Executors |
+| **Background Processing** | Foreground Service, Android Notifications API, WindowManager System Overlay |
 | **Data Interchange** | GSON for JSON serialization, backup, and restore |
 | **Localization** | Multi-locale string resources (Arabic RTL & English LTR) |
 
@@ -162,35 +174,35 @@ LifeFlow/
 ├── app/
 │   ├── src/main/
 │   │   ├── java/com/example/
-│   │   │   ├── MainActivity.java                # Main navigation container
+│   │   │   ├── MainActivity.java                # Main navigation container & tab coordinator
 │   │   │   ├── data/
 │   │   │   │   ├── AppDatabase.java             # Room database configuration
-│   │   │   │   ├── ActivityDao.java             # Activity CRUD operations
-│   │   │   │   ├── SessionDao.java              # Time session queries & aggregations
-│   │   │   │   ├── TrackingActivity.java        # Activity entity model
-│   │   │   │   ├── TrackingSession.java         # Session entity model
+│   │   │   │   ├── dao/                         # ActivityDao, SessionDao, DailyProgressDao
+│   │   │   │   ├── entity/                      # Activity, ActivitySession, DailyProgress entities
 │   │   │   │   └── TrackingRepository.java      # Business logic, aggregations & trends
 │   │   │   ├── service/
-│   │   │   │   └── TrackingForegroundService.java # Foreground timer notification
+│   │   │   │   └── TrackingService.java         # Foreground timer & continuous polling service
 │   │   │   ├── ui/
-│   │   │   │   ├── dashboard/                   # Live tracking dashboard
+│   │   │   │   ├── dashboard/                   # Live tracking dashboard & active timer
+│   │   │   │   ├── blocker/                     # AppBlockerManager & AppBlockerActivity (Overlay Blocker)
 │   │   │   │   ├── statistics/                  # Custom multi-line chart & breakdown
-│   │   │   │   │   ├── MultiLineStatsChartView.java # Custom canvas drawing engine
-│   │   │   │   │   └── StatsFragment.java       # Statistics controller
+│   │   │   │   ├── progress/                    # Week/Month progress matrices & streaks
 │   │   │   │   ├── activities/                  # Activity management & goal editor
-│   │   │   │   └── settings/                    # Backups, tiers, and language switcher
+│   │   │   │   └── settings/                    # Smart tracking, backups, and language switcher
 │   │   │   └── util/
-│   │   │       ├── ColorHelper.java             # Color palettes & contrast calculations
-│   │   │       ├── IconHelper.java              # Icon/emoji mappings
-│   │   │       └── LocaleHelper.java            # Dynamic language switching
+│   │   │       ├── SmartTrackingManager.java    # Automated priority tracking & permission resolver
+│   │   │       ├── IconHelper.java              # Icon & emoji mappings
+│   │   │       ├── LanguageManager.java         # Dynamic language & locale switching
+│   │   │       └── SubscriptionManager.java     # Feature tier manager
 │   │   ├── res/
 │   │   │   ├── layout/                          # XML Material 3 layouts
 │   │   │   ├── values/                          # English resources & themes
 │   │   │   └── values-ar/                       # Arabic RTL resources
 │   │   └── AndroidManifest.xml
+│   ├── build.gradle.kts
+│   └── proguard-rules.pro
 ├── docs/
 │   └── assets/                                  # Showcase images & banners
-├── build.gradle.kts
 └── README.md
 ```
 
@@ -211,7 +223,7 @@ LifeFlow/
    ```
 2. **Open in Android Studio:**
    - Launch Android Studio.
-   - Select **Open an existing project** and select the cloned root folder.
+   - Select **Open an existing project** and choose the project root folder.
 3. **Sync Gradle:**
    - Allow Android Studio to sync dependencies via Gradle.
 4. **Run the App:**
@@ -224,7 +236,7 @@ LifeFlow/
 
 Developed with ❤️ by **Khaled**.
 
-If you like this project, please give it a ⭐️ on GitHub!
+If you find this project helpful, please give it a ⭐️ on GitHub!
 
 ---
 

@@ -18,9 +18,12 @@ public class DailyProgress {
 
     public int lastNotifiedThreshold; // 0, 25, 50, 75, 100, 125, 150... highest threshold already notified for that day
 
+    public boolean isPaused; // True if activity is paused / excused for this day (rest day / streak preservation)
+
     public DailyProgress() {
         this.compositeKey = "";
         this.dateKey = "";
+        this.isPaused = false;
     }
 
     @Ignore
@@ -29,6 +32,16 @@ public class DailyProgress {
         this.dateKey = dateKey;
         this.compositeKey = activityId + "_" + dateKey;
         this.lastNotifiedThreshold = lastNotifiedThreshold;
+        this.isPaused = false;
+    }
+
+    @Ignore
+    public DailyProgress(long activityId, @NonNull String dateKey, int lastNotifiedThreshold, boolean isPaused) {
+        this.activityId = activityId;
+        this.dateKey = dateKey;
+        this.compositeKey = activityId + "_" + dateKey;
+        this.lastNotifiedThreshold = lastNotifiedThreshold;
+        this.isPaused = isPaused;
     }
 
     @NonNull

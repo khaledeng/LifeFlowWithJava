@@ -146,6 +146,12 @@ public class CalendarMonthAdapter extends RecyclerView.Adapter<CalendarMonthAdap
 
             // Progress status display
             switch (data.status) {
+                case PAUSED:
+                    holder.tvPercentage.setVisibility(View.VISIBLE);
+                    holder.tvPercentage.setText("⏸");
+                    holder.tvPercentage.setTextColor(COLOR_ORANGE);
+                    break;
+
                 case COMPLETED_100:
                     holder.ivCheckBadge.setVisibility(View.VISIBLE);
                     break;

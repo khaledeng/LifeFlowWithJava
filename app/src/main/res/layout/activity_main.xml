@@ -32,7 +32,6 @@
         android:layout_height="64dp"
         android:background="#0A0A0C"
         app:elevation="0dp"
-        app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
         app:itemIconTint="@color/nav_item_tint"
         app:itemRippleColor="#153018"
         app:itemTextColor="@color/nav_item_tint"

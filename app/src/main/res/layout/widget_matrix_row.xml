@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_row_root"
+    android:layout_width="match_parent"
+    android:layout_height="32dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:layout_marginTop="1dp"
+    android:layout_marginBottom="1dp">
+
+    <!-- Activity Info Column (Clickable to select this activity) -->
+    <LinearLayout
+        android:id="@+id/layout_row_act_info"
+        android:layout_width="86dp"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingEnd="4dp">
+
+        <ImageView
+            android:id="@+id/iv_row_dot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="4dp"
+            android:src="@drawable/ic_circle_fill_white" />
+
+        <TextView
+            android:id="@+id/tv_row_act_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Quran"
+            android:textColor="#F0F0F5"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:singleLine="true" />
+    </LinearLayout>
+
+    <!-- 7 Day Clickable Cells -->
+    <ImageView
+        android:id="@+id/iv_cell_0"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_1"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_2"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_3"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_4"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_5"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+    <ImageView
+        android:id="@+id/iv_cell_6"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:padding="2dp"
+        android:scaleType="fitCenter" />
+
+</LinearLayout>

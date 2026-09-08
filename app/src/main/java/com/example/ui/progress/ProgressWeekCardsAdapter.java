@@ -68,6 +68,10 @@ public class ProgressWeekCardsAdapter extends RecyclerView.Adapter<ProgressWeekC
                     holder.flDayRings[i].setBackgroundResource(R.drawable.bg_circle_ring_dotted);
                     holder.tvDayVals[i].setText("…");
                     holder.tvDayVals[i].setTextColor(Color.parseColor("#8E8E93"));
+                } else if (day.status == ProgressDayData.Status.PAUSED || day.isPaused) {
+                    holder.flDayRings[i].setBackgroundResource(R.drawable.bg_circle_ring_orange);
+                    holder.tvDayVals[i].setText("⏸");
+                    holder.tvDayVals[i].setTextColor(Color.parseColor("#FFD60A"));
                 } else if (day.status == ProgressDayData.Status.COMPLETED_100) {
                     holder.flDayRings[i].setBackgroundResource(R.drawable.bg_circle_ring_green);
                     holder.tvDayVals[i].setText("✓");

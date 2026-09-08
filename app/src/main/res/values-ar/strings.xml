@@ -120,6 +120,15 @@
     <!-- Export & Import JSON Strings -->
     <string name="backup_section_title">النسخ الاحتياطي (JSON)</string>
     <string name="backup_section_desc">تصدير الأنشطة والسجل كملف JSON أو استعادة نسخة احتياطية.</string>
+    <string name="auto_backup_switch_title">النسخ الاحتياطي التلقائي (12:00 منتصف الليل)</string>
+    <string name="auto_backup_switch_desc">حفظ نسخة احتياطية كاملة في ذاكرة الجهاز يومياً تلقائياً عند منتصف الليل لحماية بياناتك من أي فقدان.</string>
+    <string name="btn_view_auto_backups">استعادة من النسخ الاحتياطية التلقائية</string>
+    <string name="auto_backup_history_dialog_title">النسخ التلقائية المحفوظة</string>
+    <string name="auto_backup_no_backups">لا توجد نسخ احتياطية تلقائية بعد. ستظهر هنا فور اكتمال أول نسخة.</string>
+    <string name="auto_backup_enabled_toast">تم تفعيل النسخ الاحتياطي التلقائي (يومياً الساعة 12 منتصف الليل)</string>
+    <string name="auto_backup_disabled_toast">تم إيقاف النسخ الاحتياطي التلقائي</string>
+    <string name="auto_backup_now_btn">نسخ احتياطي فوري الآن</string>
+    <string name="auto_backup_now_success">تم حفظ نسخة احتياطية فورية على الجهاز بنجاح.</string>
     <string name="btn_export_json">تصدير نسخة احتياطية</string>
     <string name="btn_import_json">استيراد ملف JSON</string>
     <string name="btn_paste_json">لصق نص JSON</string>
@@ -378,6 +387,8 @@
     <string name="smart_tracking_default_time">الوقت الافتراضي:</string>
     <string name="smart_tracking_time_from" formatted="false">من: %s</string>
     <string name="smart_tracking_time_to" formatted="false">إلى: %s</string>
+    <string name="smart_tracking_add_time_slot">+ إضافة فترة زمنية أخرى</string>
+    <string name="smart_tracking_delete_time_slot">حذف الفترة</string>
     <string name="smart_tracking_link_app">ربط تطبيق</string>
     <string name="smart_tracking_no_app_selected">لم يتم تحديد تطبيق</string>
     <string name="smart_tracking_bound_to_format" formatted="false">مرتبط بـ: %s</string>
@@ -414,4 +425,40 @@
     <string name="banner_permission_overlay_desc">اضغط هنا لتفعيل إذن الظهور فوق التطبيقات لتظهر شاشة الحظر وتمنع التطبيقات فوراً.</string>
     <string name="banner_permission_notif_title">⚠️ إذن الإشعارات مفقود</string>
     <string name="banner_permission_notif_desc">اضغط هنا لتفعيل الإشعارات لضمان استمرار الخدمة في الخلفية.</string>
+
+    <!-- Month Matrix Widget Strings -->
+    <string name="widget_month_matrix_title">مصفوفة إنجاز الشهر</string>
+    <string name="widget_month_matrix_description">تابع عاداتك ومصفوفة إنجاز الشهر مباشرة من الشاشة الرئيسية.</string>
+    <string name="widget_refresh">تحديث</string>
+    <string name="widget_open_app">فتح التطبيق</string>
+    <string name="widget_no_activities">لا توجد أنشطة بعد. اضغط للبدء في التتبع!</string>
+    <string name="widget_today_badge" formatted="false">%1$d/%2$d اليوم</string>
+    <string name="widget_legend_completed">مكتمل</string>
+    <string name="widget_legend_partial">جزئي</string>
+    <string name="widget_legend_exceeded">تجاوز</string>
+    <string name="widget_legend_today">اليوم</string>
+    <string name="widget_mode_14days">١٤ يوم ▾</string>
+    <string name="widget_mode_month">الشهر ▾</string>
+    <string name="widget_prev_month">الشهر السابق</string>
+    <string name="widget_next_month">الشهر التالي</string>
+    <string name="widget_prev_days">الأيام السابقة</string>
+    <string name="widget_next_days">الأيام التالية</string>
+    <string name="widget_days_range" formatted="false">الأيام: %1$d - %2$d</string>
+    <string name="widget_view_7days_label">عرض ٧ أيام</string>
+    <string name="matrix_dialog_mark_done_title">تحديد كـ مكتمل؟</string>
+    <string name="matrix_dialog_mark_done_msg">تعيين \"%1$s\" في %2$s كمكتمل (١٠٠٪ من الهدف اليومي)؟</string>
+    <string name="matrix_dialog_action_done">Make Done</string>
+    <string name="matrix_dialog_action_no">No</string>
+    <string name="matrix_toast_marked_done">تم تحديد \"%1$s\" كمكتمل (%2$s) ✓</string>
+    <string name="matrix_toast_marked_undone">تم إلغاء إكمال \"%1$s\" (%2$s) ✕</string>
+    <string name="matrix_toast_marked_paused">تم إيقاف \"%1$s\" مؤقتاً لـ (%2$s) ⏸ (حُفظ الستريك)</string>
+    <string name="widget_btn_make_done">✓ مكتمل</string>
+    <string name="widget_btn_make_undone">✕ إلغاء</string>
+    <string name="widget_btn_make_pause">⏸ راحة</string>
+    <string name="dialog_btn_pause">⏸ يوم راحة (إيقاف)</string>
+    <string name="dialog_btn_done">✓ تحديد كمكتمل</string>
+    <string name="dialog_btn_undone">✕ إلغاء الإكمال</string>
+    <string name="status_paused_label">موقوف مؤقتاً (يوم راحة) • الستريك محفوظ ⏸</string>
+    <string name="widget_legend_paused">يوم راحة</string>
+    <string name="widget_act_header">النشاط</string>
 </resources>

@@ -76,7 +76,11 @@ public class ProgressActivityAdapter extends RecyclerView.Adapter<ProgressActivi
         Activity act = activities.get(position);
         boolean isSelected = (act.getId() == selectedActivityId);
 
-        holder.tvName.setText(act.getNameWithArrow());
+        if (act.isOnce()) {
+            holder.tvName.setText("⚡ " + act.getNameWithArrow());
+        } else {
+            holder.tvName.setText(act.getNameWithArrow());
+        }
 
         int color = IconHelper.parseColorOrDefault(act.getColorHex(), 0xFF39D353);
 

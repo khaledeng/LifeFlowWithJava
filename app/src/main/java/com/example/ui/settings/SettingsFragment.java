@@ -104,6 +104,7 @@ public class SettingsFragment extends Fragment {
     private void updateNotificationSwitchUI() {
         binding.switchNotifications.setChecked(subscriptionManager.isNotificationsEnabled());
         binding.switchMotivationalNotifications.setChecked(subscriptionManager.isMotivationalNotificationsEnabled());
+        binding.switchAutoBackup.setChecked(subscriptionManager.isAutoBackupEnabled());
     }
 
     private void setupListeners() {
@@ -129,6 +130,48 @@ public class SettingsFragment extends Fragment {
             subscriptionManager.setMotivationalNotificationsEnabled(isChecked);
         });
 
+        binding.switchAutoBackup.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            subscriptionManager.setAutoBackupEnabled(isChecked);
+            if (getContext() != null) {
+                com.example.util.AutoBackupManager.updateSchedule(requireContext());
+            }
+            if (isChecked) {
+                if (getContext() != null) {
+                    Toast.makeText(requireContext(), R.string.auto_backup_enabled_toast, Toast.LENGTH_SHORT).show();
+                    Context appContext = requireContext().getApplicationContext();
+                    new Thread(() -> {
+                        com.example.util.AutoBackupManager.performBackupSync(appContext);
+                    }).start();
+                }
+            } else {
+                if (getContext() != null) {
+                    Toast.makeText(requireContext(), R.string.auto_backup_disabled_toast, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        binding.btnRestoreAutoBackup.setOnClickListener(v -> showAutoBackupsDialog());
+
+        binding.btnBackupNow.setOnClickListener(v -> {
+            com.example.util.HapticHelper.performClick(v);
+            if (getContext() == null) return;
+            Context appContext = requireContext().getApplicationContext();
+            new Thread(() -> {
+                boolean success = com.example.util.AutoBackupManager.performBackupSync(appContext);
+                if (getActivity() != null && !getActivity().isFinishing()) {
+                    getActivity().runOnUiThread(() -> {
+                        if (getContext() != null) {
+                            if (success) {
+                                Toast.makeText(getContext(), R.string.auto_backup_now_success, Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(getContext(), R.string.export_failed_toast, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                }
+            }).start();
+        });
+
         binding.cardLanguage.setOnClickListener(v -> toggleLanguage());
 
         binding.btnExportJson.setOnClickListener(v -> handleExportJson());
@@ -140,7 +183,9 @@ public class SettingsFragment extends Fragment {
                 try {
                     importFileLauncher.launch("application/json");
                 } catch (Exception e2) {
-                    Toast.makeText(requireContext(), "No file picker app found", Toast.LENGTH_SHORT).show();
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "No file picker app found", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         });
@@ -148,10 +193,11 @@ public class SettingsFragment extends Fragment {
 
     private void handleExportJson() {
         repository.exportDataToJson((json, error) -> {
-            if (getActivity() == null) return;
+            if (getActivity() == null || getActivity().isFinishing() || getContext() == null) return;
             getActivity().runOnUiThread(() -> {
+                if (getContext() == null) return;
                 if (json == null) {
-                    Toast.makeText(requireContext(), R.string.export_failed_toast, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), R.string.export_failed_toast, Toast.LENGTH_SHORT).show();
                     return;
                 }
                 pendingExportJson = json;
@@ -173,18 +219,24 @@ public class SettingsFragment extends Fragment {
     }
 
     private void writeJsonToUri(Uri uri, String json) {
+        if (getContext() == null) return;
         try (OutputStream outputStream = requireContext().getContentResolver().openOutputStream(uri)) {
             if (outputStream != null) {
                 outputStream.write(json.getBytes(StandardCharsets.UTF_8));
                 outputStream.flush();
-                Toast.makeText(requireContext(), R.string.export_success_toast, Toast.LENGTH_SHORT).show();
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), R.string.export_success_toast, Toast.LENGTH_SHORT).show();
+                }
             }
         } catch (Exception e) {
-            Toast.makeText(requireContext(), getString(R.string.export_failed_toast, e.getMessage()), Toast.LENGTH_SHORT).show();
+            if (getContext() != null) {
+                Toast.makeText(getContext(), getString(R.string.export_failed_toast, e.getMessage()), Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
     private void readJsonFromUri(Uri uri) {
+        if (getContext() == null) return;
         try (InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
              BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             StringBuilder stringBuilder = new StringBuilder();
@@ -194,11 +246,14 @@ public class SettingsFragment extends Fragment {
             }
             parseAndImportJson(stringBuilder.toString());
         } catch (Exception e) {
-            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, "Error reading file"), Toast.LENGTH_LONG).show();
+            if (getContext() != null) {
+                Toast.makeText(getContext(), getString(R.string.import_failed_toast, "Error reading file"), Toast.LENGTH_LONG).show();
+            }
         }
     }
 
     private void parseAndImportJson(String jsonString) {
+        if (getContext() == null || !isAdded()) return;
         try {
             JSONObject root = new JSONObject(jsonString);
             JSONObject metadata = root.optJSONObject("metadata");
@@ -221,6 +276,7 @@ public class SettingsFragment extends Fragment {
                         executeImport(jsonString, false);
                     })
                     .setNeutralButton(R.string.import_replace_btn, (dialog, which) -> {
+                        if (getContext() == null) return;
                         new AlertDialog.Builder(requireContext())
                                 .setTitle(R.string.confirm_full_replacement_title)
                                 .setMessage(R.string.confirm_full_replacement_msg)
@@ -231,20 +287,73 @@ public class SettingsFragment extends Fragment {
                     .setNegativeButton(R.string.cancel_button, null)
                     .show();
         } catch (Exception e) {
-            Toast.makeText(requireContext(), getString(R.string.import_failed_toast, "Invalid JSON structure: " + e.getMessage()), Toast.LENGTH_LONG).show();
+            if (getContext() != null) {
+                Toast.makeText(getContext(), getString(R.string.import_failed_toast, "Invalid JSON structure: " + e.getMessage()), Toast.LENGTH_LONG).show();
+            }
         }
+    }
+
+    private void showAutoBackupsDialog() {
+        if (getContext() == null) return;
+        java.io.File[] backups = com.example.util.AutoBackupManager.getAvailableAutoBackups(requireContext());
+        if (backups == null || backups.length == 0) {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.auto_backup_history_dialog_title)
+                    .setMessage(R.string.auto_backup_no_backups)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            return;
+        }
+
+        String[] itemLabels = new String[backups.length];
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss", Locale.getDefault());
+        for (int i = 0; i < backups.length; i++) {
+            long lastMod = backups[i].lastModified();
+            long sizeKb = backups[i].length() / 1024;
+            String name = backups[i].getName();
+            if (name.equals("lifeflow_cumulative_auto_backup.json")) {
+                itemLabels[i] = "★ النسخة التراكمية الشاملة - " + sdf.format(new Date(lastMod));
+            } else {
+                itemLabels[i] = sdf.format(new Date(lastMod)) + " (" + (sizeKb > 0 ? sizeKb + " KB" : backups[i].length() + " B") + ")";
+            }
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.auto_backup_history_dialog_title)
+                .setItems(itemLabels, (dialog, which) -> {
+                    java.io.File selectedFile = backups[which];
+                    try {
+                        java.io.FileInputStream fis = new java.io.FileInputStream(selectedFile);
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        reader.close();
+                        fis.close();
+                        parseAndImportJson(sb.toString());
+                    } catch (Exception e) {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), getString(R.string.import_failed_toast, e.getMessage()), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.cancel_button, null)
+                .show();
     }
 
     private void executeImport(String jsonString, boolean replaceExisting) {
         repository.importDataFromJson(jsonString, replaceExisting, (actCount, sessCount, error) -> {
-            if (getActivity() == null) return;
+            if (getActivity() == null || getActivity().isFinishing() || getContext() == null) return;
             getActivity().runOnUiThread(() -> {
+                if (getContext() == null || !isAdded()) return;
                 if (error != null) {
-                    Toast.makeText(requireContext(), getString(R.string.import_failed_toast, error), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), getString(R.string.import_failed_toast, error), Toast.LENGTH_LONG).show();
                 } else {
                     String actStr = getResources().getQuantityString(R.plurals.plural_activities, actCount, actCount);
                     String sessStr = getResources().getQuantityString(R.plurals.plural_sessions, sessCount, sessCount);
-                    Toast.makeText(requireContext(), getString(R.string.import_success_template, actStr, sessStr), Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), getString(R.string.import_success_template, actStr, sessStr), Toast.LENGTH_LONG).show();
                 }
             });
         });

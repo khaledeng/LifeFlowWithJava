@@ -75,12 +75,14 @@ public class SmartTrackingFragment extends Fragment {
             }
 
             @Override
+            public void onTimeIntervalsChanged(Activity activity, List<SmartTrackingManager.TimeInterval> intervals) {
+                triggerServiceUpdate();
+            }
+
+            @Override
             public void onTimeToggled(Activity activity, boolean isEnabled) {
-                int sh = smartTrackingManager.getActivityStartHour(activity);
-                int sm = smartTrackingManager.getActivityStartMinute(activity);
-                int eh = smartTrackingManager.getActivityEndHour(activity);
-                int em = smartTrackingManager.getActivityEndMinute(activity);
-                smartTrackingManager.setActivityTimeRange(activity, sh, sm, eh, em, isEnabled);
+                List<SmartTrackingManager.TimeInterval> intervals = smartTrackingManager.getActivityTimeIntervals(activity);
+                smartTrackingManager.setActivityTimeIntervals(activity, intervals, isEnabled);
                 triggerServiceUpdate();
             }
 
@@ -205,33 +207,7 @@ public class SmartTrackingFragment extends Fragment {
     private static List<AppItem> cachedAppItems = null;
 
     public static void preloadApps(android.content.Context context) {
-        if (cachedAppItems != null && !cachedAppItems.isEmpty()) return;
-        final android.content.Context appContext = context.getApplicationContext();
-        new Thread(() -> {
-            try {
-                PackageManager pm = appContext.getPackageManager();
-                List<AppItem> appItems = new ArrayList<>();
-                Intent intent = new Intent(Intent.ACTION_MAIN, null);
-                intent.addCategory(Intent.CATEGORY_LAUNCHER);
-                List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
-                
-                java.util.HashSet<String> addedPackages = new java.util.HashSet<>();
-                for (android.content.pm.ResolveInfo resolveInfo : resolveInfos) {
-                    android.content.pm.ApplicationInfo packageInfo = resolveInfo.activityInfo.applicationInfo;
-                    if (packageInfo.packageName.equals(appContext.getPackageName())) continue;
-                    if (addedPackages.contains(packageInfo.packageName)) continue;
-                    addedPackages.add(packageInfo.packageName);
-
-                    String appName = resolveInfo.loadLabel(pm).toString();
-                    Drawable icon = resolveInfo.loadIcon(pm);
-                    appItems.add(new AppItem(appName, packageInfo.packageName, icon));
-                }
-                Collections.sort(appItems, (a, b) -> a.name.compareToIgnoreCase(b.name));
-                cachedAppItems = appItems;
-            } catch (Exception e) {
-                // ignore
-            }
-        }).start();
+        // Preload is kept as a lightweight no-op on startup to avoid memory pressure and OOM on real devices.
     }
 
     private void showAppPickerDialog(Activity activity) {
@@ -249,35 +225,49 @@ public class SmartTrackingFragment extends Fragment {
         if (cachedAppItems != null && !cachedAppItems.isEmpty()) {
             displayAppPickerDialog(title, cachedAppItems, initialSelection, showManageGroups, listener);
         } else {
-            Toast.makeText(requireContext(), getString(com.example.R.string.loading_apps_list), Toast.LENGTH_SHORT).show();
+            if (getContext() != null) {
+                Toast.makeText(requireContext(), getString(com.example.R.string.loading_apps_list), Toast.LENGTH_SHORT).show();
+            }
+            final android.content.Context appContext = requireContext().getApplicationContext();
             new Thread(() -> {
-                PackageManager pm = requireContext().getPackageManager();
-                List<AppItem> appItems = new ArrayList<>();
-                
-                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MAIN, null);
-                intent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
-                List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
-                
-                java.util.HashSet<String> addedPackages = new java.util.HashSet<>();
-                for (android.content.pm.ResolveInfo resolveInfo : resolveInfos) {
-                    android.content.pm.ApplicationInfo packageInfo = resolveInfo.activityInfo.applicationInfo;
-                    if (packageInfo.packageName.equals(requireContext().getPackageName())) continue;
+                try {
+                    PackageManager pm = appContext.getPackageManager();
+                    List<AppItem> appItems = new ArrayList<>();
                     
-                    if (addedPackages.contains(packageInfo.packageName)) continue;
-                    addedPackages.add(packageInfo.packageName);
+                    android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_MAIN, null);
+                    intent.addCategory(android.content.Intent.CATEGORY_LAUNCHER);
+                    List<android.content.pm.ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
+                    
+                    java.util.HashSet<String> addedPackages = new java.util.HashSet<>();
+                    for (android.content.pm.ResolveInfo resolveInfo : resolveInfos) {
+                        try {
+                            android.content.pm.ApplicationInfo packageInfo = resolveInfo.activityInfo.applicationInfo;
+                            if (packageInfo.packageName.equals(appContext.getPackageName())) continue;
+                            
+                            if (addedPackages.contains(packageInfo.packageName)) continue;
+                            addedPackages.add(packageInfo.packageName);
 
-                    String appName = resolveInfo.loadLabel(pm).toString();
-                    Drawable icon = resolveInfo.loadIcon(pm);
-                    appItems.add(new AppItem(appName, packageInfo.packageName, icon));
+                            String appName = resolveInfo.loadLabel(pm).toString();
+                            Drawable icon = null;
+                            try {
+                                icon = resolveInfo.loadIcon(pm);
+                            } catch (Throwable ignored) {}
+                            appItems.add(new AppItem(appName, packageInfo.packageName, icon));
+                        } catch (Throwable ignored) {}
+                    }
+                    
+                    Collections.sort(appItems, (a, b) -> a.name.compareToIgnoreCase(b.name));
+                    cachedAppItems = appItems;
+
+                    if (getActivity() == null) return;
+                    getActivity().runOnUiThread(() -> {
+                        if (isAdded() && getContext() != null) {
+                            displayAppPickerDialog(title, cachedAppItems, initialSelection, showManageGroups, listener);
+                        }
+                    });
+                } catch (Throwable t) {
+                    android.util.Log.e("SmartTrackingFragment", "Error loading app list", t);
                 }
-                
-                Collections.sort(appItems, (a, b) -> a.name.compareToIgnoreCase(b.name));
-                cachedAppItems = appItems;
-
-                if (getActivity() == null) return;
-                getActivity().runOnUiThread(() -> {
-                    displayAppPickerDialog(title, cachedAppItems, initialSelection, showManageGroups, listener);
-                });
             }).start();
         }
     }

@@ -12,11 +12,49 @@ import android.os.Build;
 import com.example.data.AppDatabase;
 import com.example.data.entity.Activity;
 import com.example.data.entity.ActivityCategory;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Objects;
 
 public class SmartTrackingManager {
+
+    public static class TimeInterval {
+        public int startHour;
+        public int startMinute;
+        public int endHour;
+        public int endMinute;
+
+        public TimeInterval() {
+            this(8, 0, 9, 0);
+        }
+
+        public TimeInterval(int startHour, int startMinute, int endHour, int endMinute) {
+            this.startHour = startHour;
+            this.startMinute = startMinute;
+            this.endHour = endHour;
+            this.endMinute = endMinute;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TimeInterval that = (TimeInterval) o;
+            return startHour == that.startHour &&
+                    startMinute == that.startMinute &&
+                    endHour == that.endHour &&
+                    endMinute == that.endMinute;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(startHour, startMinute, endHour, endMinute);
+        }
+    }
 
     private static final String PREFS_NAME = "smart_tracking_prefs";
     private static final String KEY_ENABLED = "smart_tracking_enabled";
@@ -113,34 +151,157 @@ public class SmartTrackingManager {
         prefs.edit().putBoolean(KEY_ENABLED, enabled).apply();
     }
 
-    public void setActivityTimeRange(Activity activity, int startHour, int startMin, int endHour, int endMin, boolean isTimeEnabled) {
+    public List<TimeInterval> getActivityTimeIntervals(Activity activity) {
+        if (activity == null) {
+            List<TimeInterval> list = new ArrayList<>();
+            list.add(new TimeInterval(8, 0, 9, 0));
+            return list;
+        }
+        return getActivityTimeIntervals(activity.getId(), activity.getName());
+    }
+
+    public List<TimeInterval> getActivityTimeIntervals(long activityId) {
+        return getActivityTimeIntervals(activityId, null);
+    }
+
+    public List<TimeInterval> getActivityTimeIntervals(long activityId, String activityName) {
+        List<TimeInterval> result = new ArrayList<>();
+        String json = prefs.getString("act_" + activityId + "_intervals_json", null);
+        if ((json == null || json.trim().isEmpty()) && activityName != null && !activityName.trim().isEmpty()) {
+            String nameKey = "act_name_" + activityName.trim().toLowerCase(java.util.Locale.ROOT);
+            json = prefs.getString(nameKey + "_intervals_json", null);
+        }
+
+        if (json != null && !json.trim().isEmpty()) {
+            try {
+                JSONArray arr = new JSONArray(json);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.optJSONObject(i);
+                    if (obj != null) {
+                        int sh = obj.optInt("startHour", obj.optInt("sh", 8));
+                        int sm = obj.optInt("startMinute", obj.optInt("sm", 0));
+                        int eh = obj.optInt("endHour", obj.optInt("eh", 9));
+                        int em = obj.optInt("endMinute", obj.optInt("em", 0));
+                        result.add(new TimeInterval(sh, sm, eh, em));
+                    }
+                }
+                if (!result.isEmpty()) {
+                    return result;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Fallback to legacy single interval
+        int sh = 8, sm = 0, eh = 9, em = 0;
+        if (prefs.contains("act_" + activityId + "_start_h")) {
+            sh = prefs.getInt("act_" + activityId + "_start_h", 8);
+            sm = prefs.getInt("act_" + activityId + "_start_m", 0);
+            eh = prefs.getInt("act_" + activityId + "_end_h", 9);
+            em = prefs.getInt("act_" + activityId + "_end_m", 0);
+        } else if (activityName != null && !activityName.trim().isEmpty()) {
+            String nameKey = "act_name_" + activityName.trim().toLowerCase(java.util.Locale.ROOT);
+            if (prefs.contains(nameKey + "_start_h")) {
+                sh = prefs.getInt(nameKey + "_start_h", 8);
+                sm = prefs.getInt(nameKey + "_start_m", 0);
+                eh = prefs.getInt(nameKey + "_end_h", 9);
+                em = prefs.getInt(nameKey + "_end_m", 0);
+            }
+        }
+
+        result.add(new TimeInterval(sh, sm, eh, em));
+        return result;
+    }
+
+    public void setActivityTimeIntervals(Activity activity, List<TimeInterval> intervals, boolean isTimeEnabled) {
         if (activity == null) return;
+        setActivityTimeIntervals(activity.getId(), activity.getName(), intervals, isTimeEnabled);
+    }
+
+    public void setActivityTimeIntervals(long activityId, List<TimeInterval> intervals, boolean isTimeEnabled) {
+        setActivityTimeIntervals(activityId, null, intervals, isTimeEnabled);
+    }
+
+    public void setActivityTimeIntervals(long activityId, String activityName, List<TimeInterval> intervals, boolean isTimeEnabled) {
+        List<TimeInterval> safeIntervals = (intervals != null && !intervals.isEmpty()) ? new ArrayList<>(intervals) : new ArrayList<>();
+        if (safeIntervals.isEmpty()) {
+            safeIntervals.add(new TimeInterval(8, 0, 9, 0));
+        }
+
+        JSONArray arr = new JSONArray();
+        for (TimeInterval ti : safeIntervals) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("startHour", ti.startHour);
+                obj.put("startMinute", ti.startMinute);
+                obj.put("endHour", ti.endHour);
+                obj.put("endMinute", ti.endMinute);
+                arr.put(obj);
+            } catch (Exception ignored) {}
+        }
+        String json = arr.toString();
         SharedPreferences.Editor editor = prefs.edit();
-        if (activity.getName() != null && !activity.getName().trim().isEmpty()) {
-            String nameKey = "act_name_" + activity.getName().trim().toLowerCase(java.util.Locale.ROOT);
-            editor.putInt(nameKey + "_start_h", startHour)
-                  .putInt(nameKey + "_start_m", startMin)
-                  .putInt(nameKey + "_end_h", endHour)
-                  .putInt(nameKey + "_end_m", endMin)
+
+        TimeInterval first = safeIntervals.get(0);
+
+        if (activityName != null && !activityName.trim().isEmpty()) {
+            String nameKey = "act_name_" + activityName.trim().toLowerCase(java.util.Locale.ROOT);
+            editor.putString(nameKey + "_intervals_json", json)
+                  .putInt(nameKey + "_start_h", first.startHour)
+                  .putInt(nameKey + "_start_m", first.startMinute)
+                  .putInt(nameKey + "_end_h", first.endHour)
+                  .putInt(nameKey + "_end_m", first.endMinute)
                   .putBoolean(nameKey + "_time_enabled", isTimeEnabled);
         }
-        String idKey = "act_" + activity.getId();
-        editor.putInt(idKey + "_start_h", startHour)
-              .putInt(idKey + "_start_m", startMin)
-              .putInt(idKey + "_end_h", endHour)
-              .putInt(idKey + "_end_m", endMin)
+
+        String idKey = "act_" + activityId;
+        editor.putString(idKey + "_intervals_json", json)
+              .putInt(idKey + "_start_h", first.startHour)
+              .putInt(idKey + "_start_m", first.startMinute)
+              .putInt(idKey + "_end_h", first.endHour)
+              .putInt(idKey + "_end_m", first.endMinute)
               .putBoolean(idKey + "_time_enabled", isTimeEnabled)
               .apply();
     }
 
+    public void addActivityTimeInterval(Activity activity, int startH, int startM, int endH, int endM) {
+        if (activity == null) return;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        intervals.add(new TimeInterval(startH, startM, endH, endM));
+        setActivityTimeIntervals(activity, intervals, true);
+    }
+
+    public void updateActivityTimeInterval(Activity activity, int index, int startH, int startM, int endH, int endM) {
+        if (activity == null) return;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        if (index >= 0 && index < intervals.size()) {
+            intervals.set(index, new TimeInterval(startH, startM, endH, endM));
+            setActivityTimeIntervals(activity, intervals, isActivityTimeEnabled(activity));
+        }
+    }
+
+    public void removeActivityTimeInterval(Activity activity, int index) {
+        if (activity == null) return;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        if (index >= 0 && index < intervals.size()) {
+            intervals.remove(index);
+            if (intervals.isEmpty()) {
+                intervals.add(new TimeInterval(8, 0, 9, 0));
+            }
+            setActivityTimeIntervals(activity, intervals, isActivityTimeEnabled(activity));
+        }
+    }
+
+    public void setActivityTimeRange(Activity activity, int startHour, int startMin, int endHour, int endMin, boolean isTimeEnabled) {
+        if (activity == null) return;
+        List<TimeInterval> list = new ArrayList<>();
+        list.add(new TimeInterval(startHour, startMin, endHour, endMin));
+        setActivityTimeIntervals(activity, list, isTimeEnabled);
+    }
+
     public void setActivityTimeRange(long activityId, int startHour, int startMin, int endHour, int endMin, boolean isTimeEnabled) {
-        prefs.edit()
-                .putInt("act_" + activityId + "_start_h", startHour)
-                .putInt("act_" + activityId + "_start_m", startMin)
-                .putInt("act_" + activityId + "_end_h", endHour)
-                .putInt("act_" + activityId + "_end_m", endMin)
-                .putBoolean("act_" + activityId + "_time_enabled", isTimeEnabled)
-                .apply();
+        List<TimeInterval> list = new ArrayList<>();
+        list.add(new TimeInterval(startHour, startMin, endHour, endMin));
+        setActivityTimeIntervals(activityId, list, isTimeEnabled);
     }
 
     public boolean isActivityTimeEnabled(Activity activity) {
@@ -159,63 +320,43 @@ public class SmartTrackingManager {
     
     public int getActivityStartHour(Activity activity) {
         if (activity == null) return 8;
-        if (prefs.contains("act_" + activity.getId() + "_start_h")) {
-            return prefs.getInt("act_" + activity.getId() + "_start_h", 8);
-        }
-        if (activity.getName() != null && !activity.getName().trim().isEmpty()) {
-            String nameKey = "act_name_" + activity.getName().trim().toLowerCase(java.util.Locale.ROOT);
-            if (prefs.contains(nameKey + "_start_h")) {
-                return prefs.getInt(nameKey + "_start_h", 8);
-            }
-        }
-        return 8;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        return !intervals.isEmpty() ? intervals.get(0).startHour : 8;
     }
-    public int getActivityStartHour(long activityId) { return prefs.getInt("act_" + activityId + "_start_h", 8); }
+    public int getActivityStartHour(long activityId) {
+        List<TimeInterval> intervals = getActivityTimeIntervals(activityId);
+        return !intervals.isEmpty() ? intervals.get(0).startHour : 8;
+    }
 
     public int getActivityStartMinute(Activity activity) {
         if (activity == null) return 0;
-        if (prefs.contains("act_" + activity.getId() + "_start_m")) {
-            return prefs.getInt("act_" + activity.getId() + "_start_m", 0);
-        }
-        if (activity.getName() != null && !activity.getName().trim().isEmpty()) {
-            String nameKey = "act_name_" + activity.getName().trim().toLowerCase(java.util.Locale.ROOT);
-            if (prefs.contains(nameKey + "_start_m")) {
-                return prefs.getInt(nameKey + "_start_m", 0);
-            }
-        }
-        return 0;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        return !intervals.isEmpty() ? intervals.get(0).startMinute : 0;
     }
-    public int getActivityStartMinute(long activityId) { return prefs.getInt("act_" + activityId + "_start_m", 0); }
+    public int getActivityStartMinute(long activityId) {
+        List<TimeInterval> intervals = getActivityTimeIntervals(activityId);
+        return !intervals.isEmpty() ? intervals.get(0).startMinute : 0;
+    }
 
     public int getActivityEndHour(Activity activity) {
         if (activity == null) return 9;
-        if (prefs.contains("act_" + activity.getId() + "_end_h")) {
-            return prefs.getInt("act_" + activity.getId() + "_end_h", 9);
-        }
-        if (activity.getName() != null && !activity.getName().trim().isEmpty()) {
-            String nameKey = "act_name_" + activity.getName().trim().toLowerCase(java.util.Locale.ROOT);
-            if (prefs.contains(nameKey + "_end_h")) {
-                return prefs.getInt(nameKey + "_end_h", 9);
-            }
-        }
-        return 9;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        return !intervals.isEmpty() ? intervals.get(0).endHour : 9;
     }
-    public int getActivityEndHour(long activityId) { return prefs.getInt("act_" + activityId + "_end_h", 9); }
+    public int getActivityEndHour(long activityId) {
+        List<TimeInterval> intervals = getActivityTimeIntervals(activityId);
+        return !intervals.isEmpty() ? intervals.get(0).endHour : 9;
+    }
 
     public int getActivityEndMinute(Activity activity) {
         if (activity == null) return 0;
-        if (prefs.contains("act_" + activity.getId() + "_end_m")) {
-            return prefs.getInt("act_" + activity.getId() + "_end_m", 0);
-        }
-        if (activity.getName() != null && !activity.getName().trim().isEmpty()) {
-            String nameKey = "act_name_" + activity.getName().trim().toLowerCase(java.util.Locale.ROOT);
-            if (prefs.contains(nameKey + "_end_m")) {
-                return prefs.getInt(nameKey + "_end_m", 0);
-            }
-        }
-        return 0;
+        List<TimeInterval> intervals = getActivityTimeIntervals(activity);
+        return !intervals.isEmpty() ? intervals.get(0).endMinute : 0;
     }
-    public int getActivityEndMinute(long activityId) { return prefs.getInt("act_" + activityId + "_end_m", 0); }
+    public int getActivityEndMinute(long activityId) {
+        List<TimeInterval> intervals = getActivityTimeIntervals(activityId);
+        return !intervals.isEmpty() ? intervals.get(0).endMinute : 0;
+    }
 
     public void setActivityBoundApps(Activity activity, java.util.Set<String> packageNames) {
         if (activity == null) return;
@@ -365,14 +506,15 @@ public class SmartTrackingManager {
 
         SmartTrackingManager smart = new SmartTrackingManager(context);
         if (targetMillis <= 0 && smart.isActivityTimeEnabled(activity)) {
-            int sh = smart.getActivityStartHour(activity);
-            int sm = smart.getActivityStartMinute(activity);
-            int eh = smart.getActivityEndHour(activity);
-            int em = smart.getActivityEndMinute(activity);
-            int durMin = (eh * 60 + em) - (sh * 60 + sm);
-            if (durMin < 0) durMin += 1440;
-            if (durMin > 0) {
-                targetMillis = durMin * 60L * 1000L;
+            List<TimeInterval> intervals = smart.getActivityTimeIntervals(activity);
+            long totalSchedMillis = 0;
+            for (TimeInterval ti : intervals) {
+                int durMin = (ti.endHour * 60 + ti.endMinute) - (ti.startHour * 60 + ti.startMinute);
+                if (durMin < 0) durMin += 1440;
+                totalSchedMillis += durMin * 60L * 1000L;
+            }
+            if (totalSchedMillis > 0) {
+                targetMillis = totalSchedMillis;
             }
         }
 
@@ -388,32 +530,47 @@ public class SmartTrackingManager {
     }
 
     public static boolean hasOverlayPermission(Context context) {
+        if (context == null) return false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            return android.provider.Settings.canDrawOverlays(context);
+            try {
+                return android.provider.Settings.canDrawOverlays(context);
+            } catch (Throwable t) {
+                android.util.Log.e("SmartTrackingManager", "Error checking overlay permission", t);
+                return false;
+            }
         }
         return true;
     }
 
     public static boolean hasUsagePermission(Context context) {
+        if (context == null) return false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AppOpsManager appOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
-            if (appOps == null) return false;
-            int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    android.os.Process.myUid(), context.getPackageName());
-            if (mode == AppOpsManager.MODE_DEFAULT) {
-                return context.checkCallingOrSelfPermission(android.Manifest.permission.PACKAGE_USAGE_STATS) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            try {
+                AppOpsManager appOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+                if (appOps == null) return false;
+                int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        android.os.Process.myUid(), context.getPackageName());
+                return mode == AppOpsManager.MODE_ALLOWED;
+            } catch (Throwable t) {
+                android.util.Log.e("SmartTrackingManager", "Error checking usage stats permission", t);
+                return false;
             }
-            return mode == AppOpsManager.MODE_ALLOWED;
         }
         return true;
     }
 
     public static boolean hasNotificationPermission(Context context) {
+        if (context == null) return false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return androidx.core.content.ContextCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            try {
+                return androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            } catch (Throwable t) {
+                android.util.Log.e("SmartTrackingManager", "Error checking notification permission", t);
+                return false;
+            }
         }
         return true;
     }
@@ -577,12 +734,12 @@ public class SmartTrackingManager {
                     try {
                         String idStr = key.substring("act_".length(), key.length() - "_time_enabled".length());
                         long actId = Long.parseLong(idStr);
-                        int startH = getActivityStartHour(actId);
-                        int startM = getActivityStartMinute(actId);
-                        int endH = getActivityEndHour(actId);
-                        int endM = getActivityEndMinute(actId);
-                        if (isTimeInRange(hour, minute, startH, startM, endH, endM)) {
-                            prefs.edit().putLong("override_time_" + actId, now).apply();
+                        List<TimeInterval> intervals = getActivityTimeIntervals(actId);
+                        for (TimeInterval ti : intervals) {
+                            if (isTimeInRange(hour, minute, ti.startHour, ti.startMinute, ti.endHour, ti.endMinute)) {
+                                prefs.edit().putLong("override_time_" + actId, now).apply();
+                                break;
+                            }
                         }
                     } catch (Exception ignored) {}
                 }
@@ -590,12 +747,13 @@ public class SmartTrackingManager {
                 if (Boolean.TRUE.equals(all.get(key))) {
                     try {
                         String nameKey = key.substring(0, key.length() - "_time_enabled".length());
-                        int startH = prefs.getInt(nameKey + "_start_h", 8);
-                        int startM = prefs.getInt(nameKey + "_start_m", 0);
-                        int endH = prefs.getInt(nameKey + "_end_h", 9);
-                        int endM = prefs.getInt(nameKey + "_end_m", 0);
-                        if (isTimeInRange(hour, minute, startH, startM, endH, endM)) {
-                            prefs.edit().putLong("override_time_" + nameKey, now).apply();
+                        String name = nameKey.substring("act_name_".length());
+                        List<TimeInterval> intervals = getActivityTimeIntervals(-1L, name);
+                        for (TimeInterval ti : intervals) {
+                            if (isTimeInRange(hour, minute, ti.startHour, ti.startMinute, ti.endHour, ti.endMinute)) {
+                                prefs.edit().putLong("override_time_" + nameKey, now).apply();
+                                break;
+                            }
                         }
                     } catch (Exception ignored) {}
                 }
@@ -687,7 +845,7 @@ public class SmartTrackingManager {
             }
         }
 
-        // 2. Check Active Time Schedule (e.g. Work 4 PM - 8 PM or Sleep)
+        // 2. Check Active Time Schedule (e.g. Work 8 AM - 10 AM, 1 PM - 3 PM or Sleep)
         Calendar cal = Calendar.getInstance();
         int hour = cal.get(Calendar.HOUR_OF_DAY);
         int minute = cal.get(Calendar.MINUTE);
@@ -697,16 +855,22 @@ public class SmartTrackingManager {
 
         for (Activity act : allActivities) {
             if (isActivityTimeEnabled(act)) {
-                int startH = getActivityStartHour(act);
-                int startM = getActivityStartMinute(act);
-                int endH = getActivityEndHour(act);
-                int endM = getActivityEndMinute(act);
-                if (isTimeInRange(hour, minute, startH, startM, endH, endM)) {
-                    if (!isScheduleOverridden(act, hour, minute, startH, startM, endH, endM)) {
-                        matchingScheduleActivity = act;
-                        matchingScheduleWindowStart = getScheduleWindowStartTime(hour, minute, startH, startM, endH, endM);
-                        break;
+                List<TimeInterval> intervals = getActivityTimeIntervals(act);
+                for (TimeInterval interval : intervals) {
+                    int startH = interval.startHour;
+                    int startM = interval.startMinute;
+                    int endH = interval.endHour;
+                    int endM = interval.endMinute;
+                    if (isTimeInRange(hour, minute, startH, startM, endH, endM)) {
+                        if (!isScheduleOverridden(act, hour, minute, startH, startM, endH, endM)) {
+                            matchingScheduleActivity = act;
+                            matchingScheduleWindowStart = getScheduleWindowStartTime(hour, minute, startH, startM, endH, endM);
+                            break;
+                        }
                     }
+                }
+                if (matchingScheduleActivity != null) {
+                    break;
                 }
             }
         }

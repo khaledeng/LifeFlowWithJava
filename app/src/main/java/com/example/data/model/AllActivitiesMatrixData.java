@@ -29,7 +29,8 @@ public class AllActivitiesMatrixData {
         public long trackedMillis;
         public long targetMillis;
         public float percent;
-        public int status; // 2 = COMPLETED (100%+), 1 = PARTIAL (>0), 0 = ZERO, -1 = FUTURE
+        public int status; // 3 = PAUSED/REST DAY, 2 = COMPLETED (100%+), 1 = PARTIAL (>0), 0 = ZERO, -1 = FUTURE
         public boolean isToday;
+        public boolean isPaused;
     }
 }

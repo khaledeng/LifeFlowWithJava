@@ -647,13 +647,18 @@ public class StatsFragment extends Fragment {
 
                     if (trackedTotal > 0) {
                         for (com.example.data.TrackingRepository.ActivityStat stat : stats) {
-                            float pct = ((float) stat.durationMillis / trackedTotal) * 100f;
-                            int color = com.example.util.IconHelper.parseColorOrDefault(stat.colorHex, Color.parseColor("#39D353"));
-                            pieSlices.add(new PieChartView.Slice(stat.name, pct, color));
+                            if (stat.durationMillis > 0) {
+                                float pct = ((float) stat.durationMillis / trackedTotal) * 100f;
+                                int color = com.example.util.IconHelper.parseColorOrDefault(stat.colorHex, Color.parseColor("#39D353"));
+                                pieSlices.add(new PieChartView.Slice(stat.name, pct, color));
+                            }
                         }
                     }
 
                     binding.chartPieStats.setSlices(pieSlices);
+                    boolean hasPieData = !pieSlices.isEmpty();
+                    binding.layoutDistributionHeader.setVisibility(hasPieData ? View.VISIBLE : View.GONE);
+                    binding.chartPieStats.setVisibility(hasPieData ? View.VISIBLE : View.GONE);
                 }
 
                 checkAndStartTimer();

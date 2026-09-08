@@ -79,7 +79,12 @@ public class ProgressWeekAdapter extends RecyclerView.Adapter<ProgressWeekAdapte
             holder.progressBar.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#44444F")));
         } else {
             holder.itemView.setAlpha(1.0f);
-            if (data.status == ProgressDayData.Status.COMPLETED_100) {
+            if (data.status == ProgressDayData.Status.PAUSED || data.isPaused) {
+                holder.tvStatusBadge.setText("⏸ " + context.getString(R.string.widget_legend_paused));
+                holder.tvStatusBadge.setTextColor(Color.parseColor("#FFD60A"));
+                holder.tvPercentVal.setTextColor(Color.parseColor("#FFD60A"));
+                holder.progressBar.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#FFD60A")));
+            } else if (data.status == ProgressDayData.Status.COMPLETED_100) {
                 holder.tvStatusBadge.setText("✓ " + context.getString(R.string.status_achieved));
                 holder.tvStatusBadge.setTextColor(Color.parseColor("#39D353"));
                 holder.tvPercentVal.setTextColor(Color.parseColor("#39D353"));

@@ -36,14 +36,28 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        com.example.util.LanguageManager.applySavedLanguage(this);
+        try {
+            com.example.util.LanguageManager.applySavedLanguage(this);
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error applying language", e);
+        }
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        repository = TrackingRepository.getInstance(this);
+        try {
+            repository = TrackingRepository.getInstance(this);
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Error initializing repository", t);
+        }
 
-        com.example.ui.settings.SmartTrackingFragment.preloadApps(this);
+        try {
+            com.example.util.AutoBackupManager.updateSchedule(this);
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Error scheduling backup", t);
+        }
+
+        checkPreviousCrashAndNotify();
 
         binding.bottomNavigation.setOnItemSelectedListener(this);
 
@@ -51,23 +65,50 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         requestNotificationPermissionIfNeeded();
 
         // Observe active session to sync with foreground service
-        repository.getActiveSession().observe(this, activeSession -> {
-            com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(this);
-            if (activeSession != null && activeSession.isActive()) {
-                TrackingService.startTracking(this, activeSession.getActivityName());
-            } else {
-                if (smart.isEnabled()) {
-                    TrackingService.startTracking(this, "Smart Tracking");
-                } else {
-                    TrackingService.stopTracking(this);
-                }
+        try {
+            if (repository != null) {
+                final boolean[] isTrackingActive = new boolean[]{false};
+                repository.getActiveSession().observe(this, activeSession -> {
+                    try {
+                        com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(this);
+                        if (activeSession != null && activeSession.isActive()) {
+                            isTrackingActive[0] = true;
+                            TrackingService.startTracking(this, activeSession.getActivityName());
+                        } else {
+                            if (smart.isEnabled()) {
+                                isTrackingActive[0] = true;
+                                TrackingService.startTracking(this, "Smart Tracking");
+                            } else if (isTrackingActive[0]) {
+                                isTrackingActive[0] = false;
+                                TrackingService.stopTracking(this);
+                            }
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("MainActivity", "Error in activeSession observer", e);
+                    }
+                });
             }
-        });
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error observing active session", e);
+        }
 
         if (savedInstanceState != null) {
             currentNavId = savedInstanceState.getInt(KEY_CURRENT_NAV_ID, R.id.nav_home);
         } else {
-            showFragment(new DashboardFragment(), "FRAGMENT_DASHBOARD");
+            if (getIntent() != null && "PROGRESS".equals(getIntent().getStringExtra("NAVIGATE_TO"))) {
+                navigateToProgress();
+            } else {
+                showFragment(new DashboardFragment(), "FRAGMENT_DASHBOARD");
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent != null && "PROGRESS".equals(intent.getStringExtra("NAVIGATE_TO"))) {
+            navigateToProgress();
         }
     }
 
@@ -203,6 +244,29 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         });
 
         dialog.show();
+    }
+
+    private void checkPreviousCrashAndNotify() {
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences(
+                    LifeFlowApplication.CRASH_PREFS, MODE_PRIVATE);
+            String lastCrash = prefs.getString(LifeFlowApplication.KEY_LAST_CRASH, null);
+            long crashTime = prefs.getLong(LifeFlowApplication.KEY_LAST_CRASH_TIME, 0);
+
+            if (lastCrash != null && !lastCrash.isEmpty()) {
+                prefs.edit().remove(LifeFlowApplication.KEY_LAST_CRASH).apply();
+
+                if (System.currentTimeMillis() - crashTime < 300000) {
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                            .setTitle("تم استعادة استقرار التطبيق")
+                            .setMessage("تم الكشف عن إغلاق غير متوقع سابقاً وتم تطبيق المعالجة التلقائية لقواعد البيانات والذاكرة بنجاح.")
+                            .setPositiveButton("حسناً", (d, w) -> d.dismiss())
+                            .show();
+                }
+            }
+        } catch (Throwable t) {
+            android.util.Log.e("MainActivity", "Error checking crash log", t);
+        }
     }
 
     private void showFragment(Fragment fragment, String tag) {

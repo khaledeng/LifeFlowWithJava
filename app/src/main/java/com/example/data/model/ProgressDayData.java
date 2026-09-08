@@ -17,6 +17,7 @@ public class ProgressDayData {
     public ActivityCategory category;
     public String dateLabel; // e.g. "20 أغسطس" / "20 Aug"
     public String dayLetter; // e.g. "س", "أ", "ا", "ث", "أ", "خ", "ج" / "S", "S", "M", "T", "W", "T", "F"
+    public boolean isPaused; // True if activity is paused / excused for this day
 
     public enum Status {
         COMPLETED_100,      // ✓ Checkmark (Green) - for Increase goals
@@ -25,6 +26,7 @@ public class ProgressDayData {
         PARTIAL_ORANGE,     // Orange (1%-49% for Increase, 51%-75% for Decrease)
         PARTIAL_RED,        // Red (76%-99% for Decrease)
         ZERO,               // 0% (Neutral for Increase, Green for Decrease)
+        PAUSED,             // ⏸ Paused / Rest Day (Streak preserved, 0 hours tracked)
         FUTURE              // Future day (Disabled)
     }
 

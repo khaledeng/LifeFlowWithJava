@@ -21,6 +21,8 @@ public class SubscriptionManager {
     private static final String KEY_USED_CODES = "key_used_codes";
     private static final String KEY_NOTIFICATIONS_ENABLED = "key_notifications_enabled";
     private static final String KEY_MOTIVATIONAL_NOTIFICATIONS_ENABLED = "key_motivational_notifications_enabled";
+    private static final String KEY_AUTO_BACKUP_ENABLED = "key_auto_backup_enabled";
+    private static final String KEY_LAST_AUTO_BACKUP_TIMESTAMP = "key_last_auto_backup_timestamp";
 
     public static final int FREE_TIER_MAX_ACTIVITIES = 3;
     private static final String SECRET_KEY = "LIFEFLOW_ADMIN_SECRET_KEY_2026";
@@ -230,5 +232,21 @@ public class SubscriptionManager {
 
     public void setMotivationalNotificationsEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_MOTIVATIONAL_NOTIFICATIONS_ENABLED, enabled).apply();
+    }
+
+    public boolean isAutoBackupEnabled() {
+        return prefs.getBoolean(KEY_AUTO_BACKUP_ENABLED, false);
+    }
+
+    public void setAutoBackupEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_AUTO_BACKUP_ENABLED, enabled).apply();
+    }
+
+    public long getLastAutoBackupTimestamp() {
+        return prefs.getLong(KEY_LAST_AUTO_BACKUP_TIMESTAMP, 0L);
+    }
+
+    public void setLastAutoBackupTimestamp(long timestamp) {
+        prefs.edit().putLong(KEY_LAST_AUTO_BACKUP_TIMESTAMP, timestamp).apply();
     }
 }

@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_widget_card"
+    android:padding="8dp">
+
+    <!-- Single Unified Header: Month Navigation (Start), Days Navigation (End), Refresh -->
+    <LinearLayout
+        android:id="@+id/widget_header"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:layout_marginBottom="2dp">
+
+        <!-- Month Navigation: [<] Month Name [>] -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/btn_widget_prev_month"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:scaleType="centerInside"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_left"
+                android:contentDescription="@string/widget_prev_month" />
+
+            <TextView
+                android:id="@+id/tv_widget_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:text="@string/widget_month_matrix_title"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <ImageView
+                android:id="@+id/btn_widget_next_month"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:scaleType="centerInside"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_right"
+                android:contentDescription="@string/widget_next_month" />
+        </LinearLayout>
+
+        <!-- Flexible Spacer using RemoteViews-compatible FrameLayout -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <!-- Days Navigation: [<] 1 - 7 [>] -->
+        <LinearLayout
+            android:id="@+id/layout_days_nav"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/btn_widget_prev_days"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:scaleType="centerInside"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_left"
+                android:contentDescription="@string/widget_prev_days" />
+
+            <TextView
+                android:id="@+id/tv_widget_days_range"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="3dp"
+                android:layout_marginEnd="3dp"
+                android:text="1 - 7"
+                android:textColor="#C0C0D4"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <ImageView
+                android:id="@+id/btn_widget_next_days"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:scaleType="centerInside"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_chevron_right"
+                android:contentDescription="@string/widget_next_days" />
+        </LinearLayout>
+
+        <!-- Toggle Onces Button (Show onces / Hide onces) -->
+        <TextView
+            android:id="@+id/btn_widget_toggle_onces"
+            android:layout_width="wrap_content"
+            android:layout_height="26dp"
+            android:layout_marginStart="4dp"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="@drawable/bg_widget_onces_show_pill"
+            android:text="Show onces"
+            android:textColor="#30D158"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Retained IDs for full compatibility with existing code/views references -->
+        <ImageView
+            android:id="@+id/btn_widget_refresh"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:contentDescription="@string/widget_refresh" />
+
+        <TextView
+            android:id="@+id/tv_widget_today_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/btn_widget_open"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:contentDescription="@string/widget_open_app" />
+
+        <TextView
+            android:id="@+id/tv_widget_view_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Matrix Container: Dynamic Header + Rows of clickable circles -->
+    <LinearLayout
+        android:id="@+id/layout_matrix_rows_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="top">
+
+        <TextView
+            android:id="@+id/tv_widget_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:visibility="gone"
+            android:textColor="#8E8E93"
+            android:textSize="13sp"
+            android:text="@string/widget_no_activities" />
+    </LinearLayout>
+
+    <!-- Quick-Done Interactive Action Bar: 100% Background Execution -->
+    <LinearLayout
+        android:id="@+id/layout_quick_done_bar"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:layout_marginTop="2dp">
+
+        <ImageView
+            android:id="@+id/btn_widget_prev_act"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:scaleType="centerInside"
+            android:padding="3dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_chevron_left"
+            android:contentDescription="@string/widget_prev_days" />
+
+        <TextView
+            android:id="@+id/tv_widget_selected_act_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Activity"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:singleLine="true" />
+
+        <ImageView
+            android:id="@+id/btn_widget_next_act"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:scaleType="centerInside"
+            android:padding="3dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_chevron_right"
+            android:contentDescription="@string/widget_next_days" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_done"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:background="@drawable/bg_widget_done_pill"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:layout_marginStart="3dp"
+            android:text="@string/widget_btn_make_done"
+            android:textColor="#FFFFFF"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_pause"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:background="@drawable/bg_widget_pause_pill"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:layout_marginStart="3dp"
+            android:text="@string/widget_btn_make_pause"
+            android:textColor="#FFD60A"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_widget_quick_undone"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:gravity="center"
+            android:background="@drawable/bg_widget_undone_pill"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:layout_marginStart="3dp"
+            android:text="@string/widget_btn_make_undone"
+            android:textColor="#FF453A"
+            android:textSize="10.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

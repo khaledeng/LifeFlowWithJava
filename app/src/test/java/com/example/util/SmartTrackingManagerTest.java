@@ -64,6 +64,17 @@ public class SmartTrackingManagerTest {
     }
 
     @Test
+    public void testOvernightTimeRangeLogic() {
+        // Sleep schedule: 22:00 (10 PM) to 07:00 (7 AM)
+        Assert.assertTrue(SmartTrackingManager.isTimeInRange(23, 30, 22, 0, 7, 0));
+        Assert.assertTrue(SmartTrackingManager.isTimeInRange(6, 15, 22, 0, 7, 0));
+        Assert.assertTrue(SmartTrackingManager.isTimeInRange(22, 0, 22, 0, 7, 0));
+        Assert.assertFalse(SmartTrackingManager.isTimeInRange(7, 1, 22, 0, 7, 0));
+        Assert.assertFalse(SmartTrackingManager.isTimeInRange(8, 0, 22, 0, 7, 0));
+        Assert.assertFalse(SmartTrackingManager.isTimeInRange(14, 0, 22, 0, 7, 0));
+    }
+
+    @Test
     public void testAppLockToggle() {
         Activity entertainment = new Activity();
         entertainment.setId(303L);
@@ -91,5 +102,34 @@ public class SmartTrackingManagerTest {
 
         String target = smartTrackingManager.determineTargetActivityName(context, list, null);
         Assert.assertEquals("Free Time", target);
+    }
+
+    @Test
+    public void testMultipleTimeIntervals() {
+        Activity work = new Activity();
+        work.setId(505L);
+        work.setName("Work");
+
+        List<SmartTrackingManager.TimeInterval> intervals = new ArrayList<>();
+        intervals.add(new SmartTrackingManager.TimeInterval(8, 0, 10, 0)); // 8 AM - 10 AM
+        intervals.add(new SmartTrackingManager.TimeInterval(13, 0, 15, 0)); // 1 PM - 3 PM
+
+        smartTrackingManager.setActivityTimeIntervals(work, intervals, true);
+
+        List<SmartTrackingManager.TimeInterval> retrieved = smartTrackingManager.getActivityTimeIntervals(work);
+        Assert.assertNotNull(retrieved);
+        Assert.assertEquals(2, retrieved.size());
+        Assert.assertEquals(8, retrieved.get(0).startHour);
+        Assert.assertEquals(10, retrieved.get(0).endHour);
+        Assert.assertEquals(13, retrieved.get(1).startHour);
+        Assert.assertEquals(15, retrieved.get(1).endHour);
+
+        Assert.assertTrue(smartTrackingManager.isActivityTimeEnabled(work));
+
+        // Check time range helper for both intervals
+        Assert.assertTrue(SmartTrackingManager.isTimeInRange(9, 0, 8, 0, 10, 0));
+        Assert.assertTrue(SmartTrackingManager.isTimeInRange(14, 0, 13, 0, 15, 0));
+        Assert.assertFalse(SmartTrackingManager.isTimeInRange(11, 0, 8, 0, 10, 0));
+        Assert.assertFalse(SmartTrackingManager.isTimeInRange(11, 0, 13, 0, 15, 0));
     }
 }

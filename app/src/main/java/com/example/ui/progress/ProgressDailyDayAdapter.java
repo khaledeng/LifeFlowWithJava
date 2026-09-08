@@ -69,7 +69,12 @@ public class ProgressDailyDayAdapter extends RecyclerView.Adapter<ProgressDailyD
         holder.tvTrackedVsTarget.setText(trackedFormatted + " / " + targetFormatted);
 
         // Status Indicator Ring & Text
-        if (data.status == ProgressDayData.Status.COMPLETED_100) {
+        if (data.status == ProgressDayData.Status.PAUSED || data.isPaused) {
+            holder.layoutCircleRing.setBackgroundResource(R.drawable.bg_circle_ring_orange);
+            holder.tvCircleText.setText("⏸");
+            holder.tvCircleText.setTextColor(Color.parseColor("#FFD60A"));
+            holder.tvCircleText.setTextSize(20f);
+        } else if (data.status == ProgressDayData.Status.COMPLETED_100) {
             holder.layoutCircleRing.setBackgroundResource(R.drawable.bg_circle_ring_green);
             holder.tvCircleText.setText("✓");
             holder.tvCircleText.setTextColor(Color.parseColor("#39D353"));

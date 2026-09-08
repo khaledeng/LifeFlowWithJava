@@ -10,6 +10,7 @@ import com.example.data.entity.Activity;
 import com.example.R;
 import com.example.data.entity.ActivityCategory;
 import com.example.data.entity.ActivityEntity;
+import com.example.data.entity.DailyProgress;
 import com.example.data.entity.SessionEntity;
 import com.example.data.model.AllActivitiesMatrixData;
 import com.example.data.model.ProgressDayData;
@@ -19,9 +20,11 @@ import com.example.data.model.ProgressWeekCardData;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -68,18 +71,22 @@ public class TrackingRepository {
 
         // Ensure default items exist on initial run if DB was created previously without defaults
         AppDatabase.databaseWriteExecutor.execute(() -> {
-            if (!hasRepaired) {
-                hasRepaired = true;
-                deduplicateActivitiesInternal();
-                repairOrphanedSessionsInternal();
-            }
-            if (activityDao.getActivityCountSync() == 0) {
-                List<Activity> defaults = new ArrayList<>();
-                long now = System.currentTimeMillis();
-                defaults.add(new Activity("Work", com.example.data.entity.ActivityCategory.INCREASE, 8f, "#39D353", "ic_work", true, now));
-                defaults.add(new Activity("Sleep", com.example.data.entity.ActivityCategory.NEUTRAL, 8f, "#8A80E6", "ic_sleep", true, now + 1));
-                defaults.add(new Activity("Entertainment", com.example.data.entity.ActivityCategory.DECREASE, 8f, "#FF8C42", "ic_entertainment", true, now + 2));
-                activityDao.insertAll(defaults);
+            try {
+                if (!hasRepaired) {
+                    hasRepaired = true;
+                    deduplicateActivitiesInternal();
+                    repairOrphanedSessionsInternal();
+                }
+                if (activityDao.getActivityCountSync() == 0) {
+                    List<Activity> defaults = new ArrayList<>();
+                    long now = System.currentTimeMillis();
+                    defaults.add(new Activity("Work", com.example.data.entity.ActivityCategory.INCREASE, 8f, "#39D353", "ic_work", true, now));
+                    defaults.add(new Activity("Sleep", com.example.data.entity.ActivityCategory.NEUTRAL, 8f, "#8A80E6", "ic_sleep", true, now + 1));
+                    defaults.add(new Activity("Entertainment", com.example.data.entity.ActivityCategory.DECREASE, 8f, "#FF8C42", "ic_entertainment", true, now + 2));
+                    activityDao.insertAll(defaults);
+                }
+            } catch (Throwable t) {
+                android.util.Log.e("TrackingRepository", "Non-fatal error in startup maintenance", t);
             }
         });
     }
@@ -171,6 +178,10 @@ public class TrackingRepository {
         return allActivities;
     }
 
+    public List<Activity> getAllActivitiesSync() {
+        return activityDao.getAllActivitiesSync();
+    }
+
     public LiveData<List<SessionEntity>> getAllSessions() {
         return allSessions;
     }
@@ -238,6 +249,10 @@ public class TrackingRepository {
             database.runInTransaction(() -> {
                 long now = System.currentTimeMillis();
                 SessionEntity currentActive = sessionDao.getActiveSessionSync();
+                com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(appContext);
+                if (currentActive == null && (!fallbackToDefault || !smart.isEnabled())) {
+                    return;
+                }
                 long stoppedActivityId = -1;
                 if (currentActive != null) {
                     stoppedActivityId = currentActive.getActivityId();
@@ -247,7 +262,6 @@ public class TrackingRepository {
                     sessionDao.updateSession(currentActive);
                 }
                 
-                com.example.util.SmartTrackingManager smart = new com.example.util.SmartTrackingManager(appContext);
                 smart.overrideActiveTimeSchedules(now);
 
                 if (fallbackToDefault && smart.isEnabled()) {
@@ -277,6 +291,7 @@ public class TrackingRepository {
             if (onComplete != null) {
                 onComplete.run();
             }
+            com.example.widget.MonthMatrixWidgetProvider.updateAllWidgets(appContext);
         });
     }
 
@@ -568,16 +583,24 @@ public class TrackingRepository {
             }
 
             List<ActivityStat> statList = new ArrayList<>();
-            for (Activity act : allActs) {
-                long dur = durationPerActivity.containsKey(act.getId()) ? durationPerActivity.get(act.getId()) : 0L;
-                if (dur > 0) {
+            if (allActs != null) {
+                for (Activity act : allActs) {
+                    long dur = durationPerActivity.containsKey(act.getId()) ? durationPerActivity.get(act.getId()) : 0L;
                     float pct = totalTracked > 0 ? ((float) dur / totalTracked) * 100f : 0f;
                     statList.add(new ActivityStat(act.getId(), act.getNameWithArrow(), act.getColorHex(), act.getIconName(), dur, pct, act.getCategory()));
                 }
-            }
 
-            // Sort by duration descending
-            statList.sort((a, b) -> Long.compare(b.durationMillis, a.durationMillis));
+                // Sort: activities with tracked duration first (descending), then 0-duration activities alphabetically
+                statList.sort((a, b) -> {
+                    if (a.durationMillis != b.durationMillis) {
+                        return Long.compare(b.durationMillis, a.durationMillis);
+                    }
+                    if (a.name != null && b.name != null) {
+                        return a.name.compareToIgnoreCase(b.name);
+                    }
+                    return 0;
+                });
+            }
 
             long totalWindowMillis = Math.max(1, endWindowMillis - startWindowMillis);
             if (callback != null) {
@@ -930,7 +953,153 @@ public class TrackingRepository {
             if (onComplete != null) {
                 onComplete.run();
             }
+            com.example.widget.MonthMatrixWidgetProvider.updateAllWidgets(appContext);
         });
+    }
+
+    /**
+     * Marks an activity as DONE for a specific day by setting tracked time to reach its daily target.
+     * If expected daily target is 0 or unconfigured, defaults to 1 hour (3600000ms).
+     * Also clears any paused status for this day.
+     * Automatically syncs and updates the MonthMatrixWidgetProvider.
+     */
+    public void markActivityDoneForDay(long activityId, int monthOffset, int dayOfMonth, Runnable onComplete) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            Activity act = activityDao.getActivityById(activityId);
+            if (act == null) {
+                if (onComplete != null) onComplete.run();
+                return;
+            }
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            cal.add(Calendar.MONTH, monthOffset);
+            cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+            long dayStart = cal.getTimeInMillis();
+            long dayEnd = dayStart + 86400000L;
+            String dateKey = String.format(Locale.US, "%04d-%02d-%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, dayOfMonth);
+
+            // Clear paused state
+            DailyProgress dp = dailyProgressDao.getProgressForActivityAndDateSync(act.getId(), dateKey);
+            if (dp != null && dp.isPaused) {
+                dp.isPaused = false;
+                dailyProgressDao.update(dp);
+            }
+
+            // Target millis: if expected hours > 0 use it, otherwise default to 1 hour
+            float targetHours = act.getExpectedHoursPerDay();
+            long targetMillis = (long) (targetHours * 3600000L);
+            if (targetMillis <= 0) {
+                targetMillis = 3600000L; // 1 hour default
+            }
+
+            // Adjust activity time to match target duration for this day
+            adjustActivityTime(act.getId(), act.getName(), dayStart, dayEnd, targetMillis, () -> {
+                com.example.widget.MonthMatrixWidgetProvider.updateAllWidgets(appContext);
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+        });
+    }
+
+    /**
+     * Marks an activity as UNDONE for a specific day by clearing tracked time (0ms) and clearing paused status.
+     * Automatically syncs and updates the MonthMatrixWidgetProvider.
+     */
+    public void markActivityUndoneForDay(long activityId, int monthOffset, int dayOfMonth, Runnable onComplete) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            Activity act = activityDao.getActivityById(activityId);
+            if (act == null) {
+                if (onComplete != null) onComplete.run();
+                return;
+            }
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            cal.add(Calendar.MONTH, monthOffset);
+            cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+            long dayStart = cal.getTimeInMillis();
+            long dayEnd = dayStart + 86400000L;
+            String dateKey = String.format(Locale.US, "%04d-%02d-%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, dayOfMonth);
+
+            // Clear paused state
+            DailyProgress dp = dailyProgressDao.getProgressForActivityAndDateSync(act.getId(), dateKey);
+            if (dp != null && dp.isPaused) {
+                dp.isPaused = false;
+                dailyProgressDao.update(dp);
+            }
+
+            // Reset activity time to 0 for this day
+            adjustActivityTime(act.getId(), act.getName(), dayStart, dayEnd, 0L, () -> {
+                com.example.widget.MonthMatrixWidgetProvider.updateAllWidgets(appContext);
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+        });
+    }
+
+    /**
+     * Marks an activity as PAUSED (Rest Day / Freeze Streak) for a specific day.
+     * Preserves streaks and month matrix visual progress without counting tracked hours (0h).
+     * Automatically syncs and updates the MonthMatrixWidgetProvider.
+     */
+    public void markActivityPausedForDay(long activityId, int monthOffset, int dayOfMonth, Runnable onComplete) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            Activity act = activityDao.getActivityById(activityId);
+            if (act == null) {
+                if (onComplete != null) onComplete.run();
+                return;
+            }
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            cal.set(Calendar.DAY_OF_MONTH, 1);
+            cal.add(Calendar.MONTH, monthOffset);
+            cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+            long dayStart = cal.getTimeInMillis();
+            long dayEnd = dayStart + 86400000L;
+            String dateKey = String.format(Locale.US, "%04d-%02d-%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, dayOfMonth);
+
+            // Set isPaused = true in daily_progress
+            DailyProgress dp = dailyProgressDao.getProgressForActivityAndDateSync(act.getId(), dateKey);
+            if (dp == null) {
+                dp = new DailyProgress(act.getId(), dateKey, 0, true);
+            } else {
+                dp.isPaused = true;
+            }
+            dailyProgressDao.insertOrUpdate(dp);
+
+            // Adjust time to 0L so it doesn't inflate tracked hours
+            adjustActivityTime(act.getId(), act.getName(), dayStart, dayEnd, 0L, () -> {
+                com.example.widget.MonthMatrixWidgetProvider.updateAllWidgets(appContext);
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+        });
+    }
+
+    public Activity getActivityByIdSync(long activityId) {
+        return activityDao.getActivityById(activityId);
     }
 
     // --- PROGRESS TRACKING & HABIT STREAKS ---
@@ -983,6 +1152,17 @@ public class TrackingRepository {
                 }
             }
 
+            // Retrieve paused days for this activity
+            List<DailyProgress> pausedRecords = dailyProgressDao.getPausedProgressForActivitySync(targetActivity.getId());
+            Set<String> pausedDates = new HashSet<>();
+            if (pausedRecords != null) {
+                for (DailyProgress dp : pausedRecords) {
+                    if (dp.isPaused && dp.dateKey != null) {
+                        pausedDates.add(dp.dateKey);
+                    }
+                }
+            }
+
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.HOUR_OF_DAY, 0);
             cal.set(Calendar.MINUTE, 0);
@@ -1010,6 +1190,8 @@ public class TrackingRepository {
                 cal.set(Calendar.DAY_OF_MONTH, day);
                 long dayStart = cal.getTimeInMillis();
                 long dayEnd = dayStart + 86400000L;
+                String dateKey = String.format(Locale.US, "%04d-%02d-%02d", cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, day);
+                boolean isPausedThisDay = pausedDates.contains(dateKey);
 
                 long trackedThisDay = 0;
                 if (targetSessions != null) {
@@ -1024,6 +1206,9 @@ public class TrackingRepository {
                     }
                 }
 
+                boolean isThisActDay = !targetActivity.isOnce() || (targetActivity.getOnceDate() != null && targetActivity.getOnceDate().trim().equals(dateKey));
+                long thisDayTarget = isThisActDay ? targetMillis : 0L;
+
                 ProgressDayData pdd = new ProgressDayData();
                 pdd.dayOfMonth = day;
                 pdd.dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
@@ -1031,13 +1216,20 @@ public class TrackingRepository {
                 pdd.startOfDayMillis = dayStart;
                 pdd.endOfDayMillis = dayEnd;
                 pdd.trackedMillis = trackedThisDay;
-                pdd.targetMillis = targetMillis;
+                pdd.targetMillis = thisDayTarget;
                 pdd.category = targetActivity.getCategory();
                 pdd.isToday = (dayStart == todayStart);
                 pdd.isFuture = (dayStart > now);
                 pdd.isCurrentMonth = true;
+                pdd.isPaused = isPausedThisDay;
 
-                if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
+                if (targetActivity.isOnce() && !isThisActDay) {
+                    pdd.status = (trackedThisDay > 0) ? ProgressDayData.Status.PARTIAL_GREEN : ProgressDayData.Status.ZERO;
+                    pdd.percentage = 0f;
+                } else if (isPausedThisDay) {
+                    pdd.status = ProgressDayData.Status.PAUSED;
+                    pdd.percentage = 100f;
+                } else if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
                     if (pdd.isFuture) {
                         pdd.status = ProgressDayData.Status.FUTURE;
                         pdd.percentage = 0f;
@@ -1074,13 +1266,15 @@ public class TrackingRepository {
                 }
 
                 if (!pdd.isFuture) {
-                    pastDaysInMonth++;
-                    totalTrackedInMonth += trackedThisDay;
-                    boolean isSuccessfulDay = (targetActivity.getCategory() == ActivityCategory.DECREASE)
-                            ? (pdd.status != ProgressDayData.Status.EXCEEDED_LIMIT_100)
-                            : (pdd.status == ProgressDayData.Status.COMPLETED_100);
-                    if (isSuccessfulDay) {
-                        completedInMonth++;
+                    if (!targetActivity.isOnce() || isThisActDay) {
+                        pastDaysInMonth++;
+                        totalTrackedInMonth += trackedThisDay;
+                        boolean isSuccessfulDay = (isPausedThisDay) || ((targetActivity.getCategory() == ActivityCategory.DECREASE)
+                                ? (pdd.status != ProgressDayData.Status.EXCEEDED_LIMIT_100)
+                                : (pdd.status == ProgressDayData.Status.COMPLETED_100));
+                        if (isSuccessfulDay) {
+                            completedInMonth++;
+                        }
                     }
                 }
 
@@ -1139,6 +1333,8 @@ public class TrackingRepository {
                 for (int w = 0; w < 7; w++) {
                     long wStart = wkCardCal.getTimeInMillis();
                     long wEnd = wStart + 86400000L;
+                    String wDateKey = String.format(Locale.US, "%04d-%02d-%02d", wkCardCal.get(Calendar.YEAR), wkCardCal.get(Calendar.MONTH) + 1, wkCardCal.get(Calendar.DAY_OF_MONTH));
+                    boolean isPausedWDay = pausedDates.contains(wDateKey);
 
                     long trackedThisWeekDay = 0;
                     if (targetSessions != null) {
@@ -1153,6 +1349,9 @@ public class TrackingRepository {
                         }
                     }
 
+                    boolean isThisActWDay = !targetActivity.isOnce() || (targetActivity.getOnceDate() != null && targetActivity.getOnceDate().trim().equals(wDateKey));
+                    long thisWDayTarget = isThisActWDay ? targetMillis : 0L;
+
                     ProgressDayData wpdd = new ProgressDayData();
                     wpdd.dayOfMonth = wkCardCal.get(Calendar.DAY_OF_MONTH);
                     wpdd.dayOfWeek = wkCardCal.get(Calendar.DAY_OF_WEEK);
@@ -1160,11 +1359,12 @@ public class TrackingRepository {
                     wpdd.startOfDayMillis = wStart;
                     wpdd.endOfDayMillis = wEnd;
                     wpdd.trackedMillis = trackedThisWeekDay;
-                    wpdd.targetMillis = targetMillis;
+                    wpdd.targetMillis = thisWDayTarget;
                     wpdd.category = targetActivity.getCategory();
                     wpdd.isToday = (wStart == todayStart);
                     wpdd.isFuture = (wStart > now);
                     wpdd.isCurrentMonth = true;
+                    wpdd.isPaused = isPausedWDay;
 
                     // Day single letter
                     switch (wpdd.dayOfWeek) {
@@ -1192,12 +1392,24 @@ public class TrackingRepository {
                             break;
                     }
 
-                    if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
+                    if (targetActivity.isOnce() && !isThisActWDay) {
+                        wpdd.status = (trackedThisWeekDay > 0) ? ProgressDayData.Status.PARTIAL_GREEN : ProgressDayData.Status.ZERO;
+                        wpdd.percentage = 0f;
+                    } else if (isPausedWDay) {
+                        wpdd.status = ProgressDayData.Status.PAUSED;
+                        wpdd.percentage = 100f;
+                        if (!wpdd.isFuture) {
+                            nonFutureDays++;
+                            sumPct += 100f;
+                        }
+                    } else if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
                         if (wpdd.isFuture) {
                             wpdd.status = ProgressDayData.Status.FUTURE;
                             wpdd.percentage = 0f;
                         } else {
-                            nonFutureDays++;
+                            if (!targetActivity.isOnce() || isThisActWDay) {
+                                nonFutureDays++;
+                            }
                             float spentPct = (targetMillis > 0) ? ((float) trackedThisWeekDay / targetMillis) * 100f : (trackedThisWeekDay > 0 ? 100f : 0f);
                             wpdd.percentage = spentPct;
                             if (spentPct >= 100f) {
@@ -1209,15 +1421,19 @@ public class TrackingRepository {
                             } else {
                                 wpdd.status = ProgressDayData.Status.ZERO;
                             }
-                            float adherence = (spentPct >= 100f) ? 0f : (spentPct > 90f ? 50f : 100f);
-                            sumPct += adherence;
+                            if (!targetActivity.isOnce() || isThisActWDay) {
+                                float adherence = (spentPct >= 100f) ? 0f : (spentPct > 90f ? 50f : 100f);
+                                sumPct += adherence;
+                            }
                         }
                     } else {
                         if (wpdd.isFuture) {
                             wpdd.status = ProgressDayData.Status.FUTURE;
                             wpdd.percentage = 0f;
                         } else {
-                            nonFutureDays++;
+                            if (!targetActivity.isOnce() || isThisActWDay) {
+                                nonFutureDays++;
+                            }
                             float pct = (targetMillis > 0) ? ((float) trackedThisWeekDay / targetMillis) * 100f : (trackedThisWeekDay > 0 ? 100f : 0f);
                             wpdd.percentage = pct;
                             if (pct >= 100f) {
@@ -1229,7 +1445,9 @@ public class TrackingRepository {
                             } else {
                                 wpdd.status = ProgressDayData.Status.ZERO;
                             }
-                            sumPct += Math.min(100f, pct);
+                            if (!targetActivity.isOnce() || isThisActWDay) {
+                                sumPct += Math.min(100f, pct);
+                            }
                         }
                     }
 
@@ -1251,7 +1469,11 @@ public class TrackingRepository {
                 }
             }
             summary.weeklyTrackedHours = totalTrackedInWeek / 3600000f;
-            summary.weeklyTargetHours = summary.dailyTargetHours * 7f;
+            if (targetActivity.isOnce()) {
+                summary.weeklyTargetHours = summary.dailyTargetHours;
+            } else {
+                summary.weeklyTargetHours = summary.dailyTargetHours * 7f;
+            }
             if (summary.weeklyTargetHours > 0) {
                 summary.weeklyGoalPercentage = (summary.weeklyTrackedHours / summary.weeklyTargetHours) * 100f;
             } else {
@@ -1271,6 +1493,10 @@ public class TrackingRepository {
             for (int d = 0; d < 30; d++) {
                 long dhStart = dailyHistoryCal.getTimeInMillis();
                 long dhEnd = dhStart + 86400000L;
+                String dhDateKey = String.format(Locale.US, "%04d-%02d-%02d", dailyHistoryCal.get(Calendar.YEAR), dailyHistoryCal.get(Calendar.MONTH) + 1, dailyHistoryCal.get(Calendar.DAY_OF_MONTH));
+                boolean isPausedDhDay = pausedDates.contains(dhDateKey);
+                boolean isThisActDhDay = !targetActivity.isOnce() || (targetActivity.getOnceDate() != null && targetActivity.getOnceDate().trim().equals(dhDateKey));
+                long thisDhTarget = isThisActDhDay ? targetMillis : 0L;
 
                 long trackedThisDay = 0;
                 if (targetSessions != null) {
@@ -1293,13 +1519,20 @@ public class TrackingRepository {
                 dpdd.startOfDayMillis = dhStart;
                 dpdd.endOfDayMillis = dhEnd;
                 dpdd.trackedMillis = trackedThisDay;
-                dpdd.targetMillis = targetMillis;
+                dpdd.targetMillis = thisDhTarget;
                 dpdd.category = targetActivity.getCategory();
                 dpdd.isToday = (dhStart == todayStart);
                 dpdd.isFuture = (dhStart > now);
                 dpdd.isCurrentMonth = true;
+                dpdd.isPaused = isPausedDhDay;
 
-                if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
+                if (targetActivity.isOnce() && !isThisActDhDay) {
+                    dpdd.status = (trackedThisDay > 0) ? ProgressDayData.Status.PARTIAL_GREEN : ProgressDayData.Status.ZERO;
+                    dpdd.percentage = 0f;
+                } else if (isPausedDhDay) {
+                    dpdd.status = ProgressDayData.Status.PAUSED;
+                    dpdd.percentage = 100f;
+                } else if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
                     if (dpdd.isFuture) {
                         dpdd.status = ProgressDayData.Status.FUTURE;
                         dpdd.percentage = 0f;
@@ -1388,6 +1621,8 @@ public class TrackingRepository {
             for (int i = 0; i < 365; i++) {
                 long dStart = streakCal.getTimeInMillis();
                 long dEnd = dStart + 86400000L;
+                String streakDateKey = String.format(Locale.US, "%04d-%02d-%02d", streakCal.get(Calendar.YEAR), streakCal.get(Calendar.MONTH) + 1, streakCal.get(Calendar.DAY_OF_MONTH));
+                boolean isPausedStreakDay = pausedDates.contains(streakDateKey);
 
                 if (dStart < effectiveCreationDayStart) {
                     break;
@@ -1407,7 +1642,9 @@ public class TrackingRepository {
                 }
 
                 boolean metGoal;
-                if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
+                if (isPausedStreakDay) {
+                    metGoal = true;
+                } else if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
                     metGoal = (tracked <= targetMillis);
                 } else {
                     metGoal = (tracked >= targetMillis * 0.95f) || (targetMillis == 0 && tracked > 0);
@@ -1434,6 +1671,8 @@ public class TrackingRepository {
             while (streakCal.getTimeInMillis() <= todayStart) {
                 long dStart = streakCal.getTimeInMillis();
                 long dEnd = dStart + 86400000L;
+                String streakDateKey = String.format(Locale.US, "%04d-%02d-%02d", streakCal.get(Calendar.YEAR), streakCal.get(Calendar.MONTH) + 1, streakCal.get(Calendar.DAY_OF_MONTH));
+                boolean isPausedStreakDay = pausedDates.contains(streakDateKey);
 
                 long tracked = 0;
                 if (targetSessions != null) {
@@ -1449,7 +1688,9 @@ public class TrackingRepository {
                 }
 
                 boolean metGoal;
-                if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
+                if (isPausedStreakDay) {
+                    metGoal = true;
+                } else if (targetActivity.getCategory() == ActivityCategory.DECREASE) {
                     metGoal = (tracked <= targetMillis);
                 } else {
                     metGoal = (tracked >= targetMillis * 0.95f) || (targetMillis == 0 && tracked > 0);
@@ -1523,6 +1764,20 @@ public class TrackingRepository {
                             timeObj.put("endHour", smartManager.getActivityEndHour(a));
                             timeObj.put("endMinute", smartManager.getActivityEndMinute(a));
                             aObj.put("smartTimeRange", timeObj);
+
+                            List<com.example.util.SmartTrackingManager.TimeInterval> intervals = smartManager.getActivityTimeIntervals(a);
+                            if (intervals != null && !intervals.isEmpty()) {
+                                JSONArray intervalsArr = new JSONArray();
+                                for (com.example.util.SmartTrackingManager.TimeInterval ti : intervals) {
+                                    JSONObject tiObj = new JSONObject();
+                                    tiObj.put("startHour", ti.startHour);
+                                    tiObj.put("startMinute", ti.startMinute);
+                                    tiObj.put("endHour", ti.endHour);
+                                    tiObj.put("endMinute", ti.endMinute);
+                                    intervalsArr.put(tiObj);
+                                }
+                                aObj.put("smartTimeIntervals", intervalsArr);
+                            }
                         }
                         java.util.Set<String> boundApps = smartManager.getActivityBoundApps(a);
                         if (boundApps != null && !boundApps.isEmpty()) {
@@ -1673,6 +1928,7 @@ public class TrackingRepository {
         int startMin = 0;
         int endHour = 9;
         int endMin = 0;
+        List<com.example.util.SmartTrackingManager.TimeInterval> timeIntervals = new ArrayList<>();
         List<String> boundApps = new ArrayList<>();
     }
 
@@ -1857,7 +2113,11 @@ public class TrackingRepository {
                         if (targetEntity != null) {
                             com.example.util.SmartTrackingManager smartManager = new com.example.util.SmartTrackingManager(appContext);
                             if (pt.timeEnabled) {
-                                smartManager.setActivityTimeRange(targetEntity, pt.startHour, pt.startMin, pt.endHour, pt.endMin, true);
+                                if (pt.timeIntervals != null && !pt.timeIntervals.isEmpty()) {
+                                    smartManager.setActivityTimeIntervals(targetEntity, pt.timeIntervals, true);
+                                } else {
+                                    smartManager.setActivityTimeRange(targetEntity, pt.startHour, pt.startMin, pt.endHour, pt.endMin, true);
+                                }
                             }
                             if (!pt.boundApps.isEmpty()) {
                                 smartManager.setActivityBoundApps(targetEntity, new java.util.HashSet<>(pt.boundApps));
@@ -2096,6 +2356,24 @@ public class TrackingRepository {
             pt.endMin = timeObj.optInt("endMinute", timeObj.optInt("end_minute", 0));
         }
 
+        // Parse smart time intervals array
+        JSONArray intervalsArr = tObj.optJSONArray("smartTimeIntervals");
+        if (intervalsArr == null) intervalsArr = tObj.optJSONArray("smart_time_intervals");
+        if (intervalsArr == null) intervalsArr = tObj.optJSONArray("timeIntervals");
+        if (intervalsArr != null && intervalsArr.length() > 0) {
+            pt.timeEnabled = true;
+            for (int k = 0; k < intervalsArr.length(); k++) {
+                JSONObject tiObj = intervalsArr.optJSONObject(k);
+                if (tiObj != null) {
+                    int sh = tiObj.optInt("startHour", tiObj.optInt("start_hour", 8));
+                    int sm = tiObj.optInt("startMinute", tiObj.optInt("start_minute", 0));
+                    int eh = tiObj.optInt("endHour", tiObj.optInt("end_hour", 9));
+                    int em = tiObj.optInt("endMinute", tiObj.optInt("end_minute", 0));
+                    pt.timeIntervals.add(new com.example.util.SmartTrackingManager.TimeInterval(sh, sm, eh, em));
+                }
+            }
+        }
+
         // Parse bound apps
         JSONArray appsArr = tObj.optJSONArray("boundApps");
         if (appsArr == null) appsArr = tObj.optJSONArray("bound_apps");
@@ -2279,7 +2557,23 @@ public class TrackingRepository {
         void onMatrixCalculated(AllActivitiesMatrixData data);
     }
 
+    public static boolean isDateInMonth(String dateStr, int targetYear, int targetMonth) {
+        if (dateStr == null || dateStr.length() < 7) return false;
+        try {
+            String[] parts = dateStr.split("-");
+            int y = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]) - 1;
+            return y == targetYear && m == targetMonth;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public void calculateAllActivitiesMatrix(int monthOffset, AllActivitiesMatrixCallback callback) {
+        calculateAllActivitiesMatrix(monthOffset, false, callback);
+    }
+
+    public void calculateAllActivitiesMatrix(int monthOffset, boolean includeOnces, AllActivitiesMatrixCallback callback) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             AllActivitiesMatrixData matrix = new AllActivitiesMatrixData();
             matrix.monthOffset = monthOffset;
@@ -2326,7 +2620,18 @@ public class TrackingRepository {
                 matrix.dayHeaders.add(dh);
             }
 
+            List<Activity> targetActs = new ArrayList<>();
             for (Activity act : allActs) {
+                if (!act.isOnce()) {
+                    targetActs.add(act);
+                } else if (includeOnces) {
+                    if (isDateInMonth(act.getOnceDate(), targetYear, targetMonth)) {
+                        targetActs.add(act);
+                    }
+                }
+            }
+
+            for (Activity act : targetActs) {
                 AllActivitiesMatrixData.ActivityRow row = new AllActivitiesMatrixData.ActivityRow();
                 row.activity = act;
 
@@ -2347,10 +2652,24 @@ public class TrackingRepository {
                     }
                 }
 
+                List<DailyProgress> actPaused = dailyProgressDao.getPausedProgressForActivitySync(act.getId());
+                Set<String> actPausedDates = new HashSet<>();
+                if (actPaused != null) {
+                    for (DailyProgress dp : actPaused) {
+                        if (dp.isPaused && dp.dateKey != null) {
+                            actPausedDates.add(dp.dateKey);
+                        }
+                    }
+                }
+
                 for (int day = 1; day <= daysInMonth; day++) {
                     cal.set(Calendar.DAY_OF_MONTH, day);
                     long dayStart = cal.getTimeInMillis();
                     long dayEnd = dayStart + 86400000L;
+                    String dateKey = String.format(Locale.US, "%04d-%02d-%02d", targetYear, targetMonth + 1, day);
+                    boolean isPausedThisDay = actPausedDates.contains(dateKey);
+                    boolean isThisActDay = !act.isOnce() || (act.getOnceDate() != null && act.getOnceDate().trim().equals(dateKey));
+                    long thisDayTargetMillis = isThisActDay ? targetMillis : 0L;
 
                     long tracked = 0;
                     if (actSessions != null) {
@@ -2368,12 +2687,22 @@ public class TrackingRepository {
                     AllActivitiesMatrixData.DayCell cell = new AllActivitiesMatrixData.DayCell();
                     cell.dayOfMonth = day;
                     cell.trackedMillis = tracked;
-                    cell.targetMillis = targetMillis;
+                    cell.targetMillis = thisDayTargetMillis;
                     cell.isToday = (targetYear == currentYear && targetMonth == currentMonth && day == currentDay);
+                    cell.isPaused = isPausedThisDay;
 
                     boolean isFuture = dayStart > todayStart;
 
-                    if (isFuture) {
+                    if (act.isOnce() && !isThisActDay) {
+                        cell.status = (tracked > 0) ? 1 : 0;
+                        cell.percent = (tracked > 0 && targetMillis > 0) ? ((float) tracked / targetMillis) : 0f;
+                    } else if (isPausedThisDay) {
+                        cell.status = 3; // 3 = PAUSED
+                        cell.percent = 1.0f;
+                        if (!isFuture) {
+                            trophyCount++;
+                        }
+                    } else if (isFuture) {
                         cell.status = -1;
                         cell.percent = 0f;
                     } else if (tracked == 0) {

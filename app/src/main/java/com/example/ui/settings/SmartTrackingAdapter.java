@@ -34,6 +34,7 @@ public class SmartTrackingAdapter extends RecyclerView.Adapter<SmartTrackingAdap
 
     public interface OnItemInteractionListener {
         void onTimeRangeSelected(Activity activity, int startH, int startM, int endH, int endM);
+        default void onTimeIntervalsChanged(Activity activity, List<SmartTrackingManager.TimeInterval> intervals) {}
         void onTimeToggled(Activity activity, boolean isEnabled);
         void onBindAppClicked(Activity activity);
         void onSetDefaultClicked(Activity activity);
@@ -125,26 +126,88 @@ public class SmartTrackingAdapter extends RecyclerView.Adapter<SmartTrackingAdap
             if (listener != null) listener.onTimeToggled(activity, isChecked);
         });
 
-        int sh = smartManager.getActivityStartHour(activity);
-        int sm = smartManager.getActivityStartMinute(activity);
-        int eh = smartManager.getActivityEndHour(activity);
-        int em = smartManager.getActivityEndMinute(activity);
+        // Inflate all time intervals
+        List<SmartTrackingManager.TimeInterval> intervals = smartManager.getActivityTimeIntervals(activity);
+        holder.llTimeIntervals.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(context);
 
-        holder.tvTimeStart.setText(context.getString(R.string.smart_tracking_time_from, formatTime(sh, sm)));
-        holder.tvTimeEnd.setText(context.getString(R.string.smart_tracking_time_to, formatTime(eh, em)));
+        for (int i = 0; i < intervals.size(); i++) {
+            final int index = i;
+            final SmartTrackingManager.TimeInterval ti = intervals.get(i);
+            View intervalView = inflater.inflate(R.layout.item_smart_time_interval, holder.llTimeIntervals, false);
 
-        holder.tvTimeStart.setOnClickListener(v -> {
-            new TimePickerDialog(context, (view, hour, minute) -> {
-                if (listener != null) listener.onTimeRangeSelected(activity, hour, minute, eh, em);
+            TextView tvStart = intervalView.findViewById(R.id.tv_interval_start);
+            TextView tvEnd = intervalView.findViewById(R.id.tv_interval_end);
+            ImageView btnDelete = intervalView.findViewById(R.id.btn_delete_interval);
+
+            tvStart.setText(context.getString(R.string.smart_tracking_time_from, formatTime(ti.startHour, ti.startMinute)));
+            tvEnd.setText(context.getString(R.string.smart_tracking_time_to, formatTime(ti.endHour, ti.endMinute)));
+
+            tvStart.setOnClickListener(v -> {
+                new TimePickerDialog(context, (view, hour, minute) -> {
+                    ti.startHour = hour;
+                    ti.startMinute = minute;
+                    smartManager.setActivityTimeIntervals(activity, intervals, isTimeEnabled);
+                    if (listener != null) {
+                        listener.onTimeIntervalsChanged(activity, intervals);
+                        listener.onTimeRangeSelected(activity, ti.startHour, ti.startMinute, ti.endHour, ti.endMinute);
+                    }
+                    notifyItemChanged(position);
+                }, ti.startHour, ti.startMinute, false).show();
+            });
+
+            tvEnd.setOnClickListener(v -> {
+                new TimePickerDialog(context, (view, hour, minute) -> {
+                    ti.endHour = hour;
+                    ti.endMinute = minute;
+                    smartManager.setActivityTimeIntervals(activity, intervals, isTimeEnabled);
+                    if (listener != null) {
+                        listener.onTimeIntervalsChanged(activity, intervals);
+                        listener.onTimeRangeSelected(activity, ti.startHour, ti.startMinute, ti.endHour, ti.endMinute);
+                    }
+                    notifyItemChanged(position);
+                }, ti.endHour, ti.endMinute, false).show();
+            });
+
+            btnDelete.setVisibility(intervals.size() > 1 ? View.VISIBLE : View.GONE);
+            btnDelete.setOnClickListener(v -> {
+                intervals.remove(index);
+                if (intervals.isEmpty()) {
+                    intervals.add(new SmartTrackingManager.TimeInterval(8, 0, 9, 0));
+                }
+                smartManager.setActivityTimeIntervals(activity, intervals, isTimeEnabled);
+                if (listener != null) {
+                    listener.onTimeIntervalsChanged(activity, intervals);
+                }
                 notifyItemChanged(position);
-            }, sh, sm, false).show();
-        });
+            });
 
-        holder.tvTimeEnd.setOnClickListener(v -> {
-            new TimePickerDialog(context, (view, hour, minute) -> {
-                if (listener != null) listener.onTimeRangeSelected(activity, sh, sm, hour, minute);
-                notifyItemChanged(position);
-            }, eh, em, false).show();
+            holder.llTimeIntervals.addView(intervalView);
+        }
+
+        holder.btnAddTimeInterval.setOnClickListener(v -> {
+            int newStartH = 13;
+            int newStartM = 0;
+            int newEndH = 15;
+            int newEndM = 0;
+
+            if (!intervals.isEmpty()) {
+                SmartTrackingManager.TimeInterval last = intervals.get(intervals.size() - 1);
+                newStartH = (last.endHour + 1) % 24;
+                newStartM = last.endMinute;
+                newEndH = (newStartH + 2) % 24;
+                newEndM = newStartM;
+            }
+
+            intervals.add(new SmartTrackingManager.TimeInterval(newStartH, newStartM, newEndH, newEndM));
+            smartManager.setActivityTimeIntervals(activity, intervals, true);
+            if (!isTimeEnabled) {
+                holder.switchTime.setChecked(true);
+            }
+            if (listener != null) {
+                listener.onTimeIntervalsChanged(activity, intervals);
+            }
+            notifyItemChanged(position);
         });
 
         // App Bound Logic
@@ -192,8 +255,8 @@ public class SmartTrackingAdapter extends RecyclerView.Adapter<SmartTrackingAdap
         MaterialButton btnDefault;
         SwitchMaterial switchTime;
         LinearLayout layoutTimeSettings;
-        TextView tvTimeStart;
-        TextView tvTimeEnd;
+        LinearLayout llTimeIntervals;
+        MaterialButton btnAddTimeInterval;
         LinearLayout layoutBindApp;
         TextView tvBoundApp;
 
@@ -205,8 +268,8 @@ public class SmartTrackingAdapter extends RecyclerView.Adapter<SmartTrackingAdap
             btnDefault = itemView.findViewById(R.id.btn_default);
             switchTime = itemView.findViewById(R.id.switch_time);
             layoutTimeSettings = itemView.findViewById(R.id.layout_time_settings);
-            tvTimeStart = itemView.findViewById(R.id.tv_time_start);
-            tvTimeEnd = itemView.findViewById(R.id.tv_time_end);
+            llTimeIntervals = itemView.findViewById(R.id.ll_time_intervals);
+            btnAddTimeInterval = itemView.findViewById(R.id.btn_add_time_interval);
             layoutBindApp = itemView.findViewById(R.id.layout_bind_app);
             tvBoundApp = itemView.findViewById(R.id.tv_bound_app);
         }

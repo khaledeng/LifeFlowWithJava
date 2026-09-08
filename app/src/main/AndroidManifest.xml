@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
 
     <application
+        android:name=".LifeFlowApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -20,6 +21,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LifeFlow">
+
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
 
         <activity
             android:name=".MainActivity"
@@ -41,6 +51,14 @@
             android:noHistory="true"
             android:theme="@style/Theme.LifeFlow" />
 
+        <activity
+            android:name=".widget.WidgetMarkDoneDialogActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.LifeFlow.Dialog" />
+
         <service
             android:name=".service.TrackingService"
             android:enabled="true"
@@ -50,6 +68,33 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Live time tracking for user habits and activities" />
         </service>
+
+        <receiver
+            android:name=".widget.MonthMatrixWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_month_matrix_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.ACTION_REFRESH_MONTH_WIDGET" />
+                <action android:name="com.example.ACTION_UPDATE_MONTH_WIDGET" />
+                <action android:name="com.example.ACTION_PREV_MONTH" />
+                <action android:name="com.example.ACTION_NEXT_MONTH" />
+                <action android:name="com.example.ACTION_PREV_DAYS" />
+                <action android:name="com.example.ACTION_NEXT_DAYS" />
+                <action android:name="com.example.ACTION_PREV_ACT" />
+                <action android:name="com.example.ACTION_NEXT_ACT" />
+                <action android:name="com.example.ACTION_SELECT_CELL" />
+                <action android:name="com.example.ACTION_TOGGLE_ONCES" />
+                <action android:name="com.example.ACTION_WIDGET_MARK_DONE" />
+                <action android:name="com.example.ACTION_WIDGET_MARK_UNDONE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_month_matrix_info" />
+        </receiver>
 
     </application>
 

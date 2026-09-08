@@ -73,37 +73,42 @@ public class IconHelper {
     }
 
     public static Bitmap createNotificationLargeIcon(Context context, String iconName, int color) {
-        int size = (int) (48 * context.getResources().getDisplayMetrics().density);
-        if (size <= 0) size = 96;
-        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
+        try {
+            int size = (int) (48 * context.getResources().getDisplayMetrics().density);
+            if (size <= 0) size = 96;
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
 
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(color);
-        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(color != 0 ? color : Color.parseColor("#39D353"));
+            canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint);
 
-        if (isEmojiIcon(iconName)) {
-            String emoji = extractEmoji(iconName);
-            Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            textPaint.setTextSize(size * 0.5f);
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            Paint.FontMetrics fm = textPaint.getFontMetrics();
-            float y = (size / 2f) - ((fm.descent + fm.ascent) / 2f);
-            canvas.drawText(emoji, size / 2f, y, textPaint);
-        } else {
-            int iconRes = getDrawableResForIcon(iconName);
-            Drawable drawable = ContextCompat.getDrawable(context, iconRes);
-            if (drawable != null) {
-                Drawable mutate = drawable.mutate();
-                double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0;
-                int iconTint = luminance > 0.45 ? Color.BLACK : Color.WHITE;
-                DrawableCompat.setTint(mutate, iconTint);
-                int padding = size / 4;
-                mutate.setBounds(padding, padding, size - padding, size - padding);
-                mutate.draw(canvas);
+            if (isEmojiIcon(iconName)) {
+                String emoji = extractEmoji(iconName);
+                Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                textPaint.setTextSize(size * 0.5f);
+                textPaint.setTextAlign(Paint.Align.CENTER);
+                Paint.FontMetrics fm = textPaint.getFontMetrics();
+                float y = (size / 2f) - ((fm.descent + fm.ascent) / 2f);
+                canvas.drawText(emoji, size / 2f, y, textPaint);
+            } else {
+                int iconRes = getDrawableResForIcon(iconName);
+                Drawable drawable = ContextCompat.getDrawable(context, iconRes);
+                if (drawable != null) {
+                    Drawable mutate = drawable.mutate();
+                    double luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0;
+                    int iconTint = luminance > 0.45 ? Color.BLACK : Color.WHITE;
+                    DrawableCompat.setTint(mutate, iconTint);
+                    int padding = size / 4;
+                    mutate.setBounds(padding, padding, size - padding, size - padding);
+                    mutate.draw(canvas);
+                }
             }
+            return bitmap;
+        } catch (Throwable t) {
+            android.util.Log.e("IconHelper", "Error creating notification icon", t);
+            return Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888);
         }
-        return bitmap;
     }
 
     public static int getDrawableResForIcon(String iconName) {

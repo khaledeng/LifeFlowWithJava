@@ -247,16 +247,20 @@ public class DashboardFragment extends Fragment {
 
     private void checkAndDisplayPermissionWarnings() {
         if (binding == null || getContext() == null) return;
-        boolean hasUsage = com.example.util.SmartTrackingManager.hasUsagePermission(requireContext());
-        boolean hasOverlay = com.example.util.SmartTrackingManager.hasOverlayPermission(requireContext());
-        boolean hasNotif = com.example.util.SmartTrackingManager.hasNotificationPermission(requireContext());
+        try {
+            boolean hasUsage = com.example.util.SmartTrackingManager.hasUsagePermission(requireContext());
+            boolean hasOverlay = com.example.util.SmartTrackingManager.hasOverlayPermission(requireContext());
+            boolean hasNotif = com.example.util.SmartTrackingManager.hasNotificationPermission(requireContext());
 
-        boolean anyMissing = (!hasUsage || !hasOverlay || !hasNotif);
-        binding.layoutPermissionBanners.setVisibility(anyMissing ? View.VISIBLE : View.GONE);
+            boolean anyMissing = (!hasUsage || !hasOverlay || !hasNotif);
+            binding.layoutPermissionBanners.setVisibility(anyMissing ? View.VISIBLE : View.GONE);
 
-        binding.bannerUsagePermission.setVisibility(!hasUsage ? View.VISIBLE : View.GONE);
-        binding.bannerOverlayPermission.setVisibility(!hasOverlay ? View.VISIBLE : View.GONE);
-        binding.bannerNotifPermission.setVisibility(!hasNotif ? View.VISIBLE : View.GONE);
+            binding.bannerUsagePermission.setVisibility(!hasUsage ? View.VISIBLE : View.GONE);
+            binding.bannerOverlayPermission.setVisibility(!hasOverlay ? View.VISIBLE : View.GONE);
+            binding.bannerNotifPermission.setVisibility(!hasNotif ? View.VISIBLE : View.GONE);
+        } catch (Throwable t) {
+            android.util.Log.e("DashboardFragment", "Error checking permission banners", t);
+        }
     }
 
     private void refreshTodayDurations() {

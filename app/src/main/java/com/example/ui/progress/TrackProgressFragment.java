@@ -31,8 +31,11 @@ import android.widget.HorizontalScrollView;
 import android.graphics.drawable.GradientDrawable;
 import android.widget.FrameLayout;
 import android.view.Gravity;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -58,6 +61,10 @@ public class TrackProgressFragment extends Fragment {
     private ProgressDailyDayAdapter dailyDayAdapter;
 
     private ProgressSummary currentSummary;
+
+    private boolean showOnces = false;
+    private TextView btnToggleOnces;
+    private final List<Activity> allRawActivities = new ArrayList<>();
 
     // Views
     private TextView tvHeaderStreak;
@@ -113,13 +120,11 @@ public class TrackProgressFragment extends Fragment {
 
         // Load activities and observe changes
         repository.getAllActivities().observe(getViewLifecycleOwner(), activities -> {
-            if (activities != null && !activities.isEmpty()) {
-                if (selectedActivityId == -1) {
-                    selectedActivityId = activities.get(0).getId();
-                }
-                activityAdapter.setActivities(activities, selectedActivityId);
-                loadProgressData();
+            allRawActivities.clear();
+            if (activities != null) {
+                allRawActivities.addAll(activities);
             }
+            updateActivityListForCurrentFilter();
         });
 
         // Observe session database changes for live real-time progress calculations
@@ -200,6 +205,131 @@ public class TrackProgressFragment extends Fragment {
         layoutMatrixLeftColumn = view.findViewById(R.id.layout_matrix_left_column);
         layoutMatrixRightGrid = view.findViewById(R.id.layout_matrix_right_grid);
         scrollMatrixRightGrid = view.findViewById(R.id.scroll_matrix_right_grid);
+
+        btnToggleOnces = view.findViewById(R.id.btn_toggle_onces);
+        if (btnToggleOnces != null) {
+            updateToggleOncesButtonUI();
+            btnToggleOnces.setOnClickListener(v -> {
+                HapticHelper.performTabSwitch(v);
+                showOnces = !showOnces;
+                updateToggleOncesButtonUI();
+                updateActivityListForCurrentFilter();
+            });
+        }
+    }
+
+    private void updateToggleOncesButtonUI() {
+        if (btnToggleOnces == null || getContext() == null) return;
+        android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+        int cornerPx = (int) (16 * getResources().getDisplayMetrics().density);
+        int strokePx = (int) (1 * getResources().getDisplayMetrics().density);
+        gd.setCornerRadius(cornerPx);
+        if (showOnces) {
+            btnToggleOnces.setText("Hide onces");
+            btnToggleOnces.setTextColor(Color.parseColor("#FF8C42"));
+            gd.setColor(Color.parseColor("#33FF8C42"));
+            gd.setStroke(strokePx, Color.parseColor("#FF8C42"));
+        } else {
+            btnToggleOnces.setText("Show onces");
+            btnToggleOnces.setTextColor(Color.parseColor("#39D353"));
+            gd.setColor(Color.parseColor("#1B2A20"));
+            gd.setStroke(strokePx, Color.parseColor("#39D353"));
+        }
+        btnToggleOnces.setBackground(gd);
+    }
+
+    private void updateActivityListForCurrentFilter() {
+        List<Activity> filtered = new ArrayList<>();
+        for (Activity act : allRawActivities) {
+            if (!act.isOnce()) {
+                filtered.add(act);
+            } else if (showOnces) {
+                boolean matches = false;
+                if (currentTab == 0) { // Monthly
+                    matches = isDateInTargetMonth(act.getOnceDate(), monthOffset);
+                } else if (currentTab == 1) { // Weekly
+                    matches = isDateInTargetWeek(act.getOnceDate(), weekOffset);
+                } else { // Daily
+                    matches = isDateInTargetDay(act.getOnceDate(), dayOffset);
+                }
+                if (matches) {
+                    filtered.add(act);
+                }
+            }
+        }
+
+        boolean found = false;
+        for (Activity a : filtered) {
+            if (a.getId() == selectedActivityId) {
+                found = true;
+                break;
+            }
+        }
+        if (!found && !filtered.isEmpty()) {
+            selectedActivityId = filtered.get(0).getId();
+        }
+
+        activityAdapter.setActivities(filtered, selectedActivityId);
+        loadProgressData();
+    }
+
+    private boolean isDateInTargetMonth(String dateStr, int offset) {
+        if (dateStr == null || dateStr.length() < 7) return false;
+        try {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.MONTH, offset);
+            int targetYear = cal.get(Calendar.YEAR);
+            int targetMonth = cal.get(Calendar.MONTH);
+
+            String[] parts = dateStr.split("-");
+            int y = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]) - 1;
+            return y == targetYear && m == targetMonth;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isDateInTargetWeek(String dateStr, int offset) {
+        if (dateStr == null) return false;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Date d = sdf.parse(dateStr);
+            if (d == null) return false;
+            long time = d.getTime();
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+            int firstDayOfWeek = cal.getFirstDayOfWeek();
+            int daysBack = (dayOfWeek - firstDayOfWeek + 7) % 7;
+            cal.add(Calendar.DAY_OF_MONTH, -daysBack);
+            cal.add(Calendar.WEEK_OF_YEAR, offset);
+
+            long startOfWeek = cal.getTimeInMillis();
+            cal.add(Calendar.DAY_OF_MONTH, 7);
+            long endOfWeek = cal.getTimeInMillis();
+
+            return time >= startOfWeek && time < endOfWeek;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isDateInTargetDay(String dateStr, int offset) {
+        if (dateStr == null) return false;
+        try {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_YEAR, offset);
+            String targetKey = String.format(Locale.US, "%04d-%02d-%02d",
+                    cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH));
+            return dateStr.equals(targetKey);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void setupRecyclerViews() {
@@ -257,7 +387,9 @@ public class TrackProgressFragment extends Fragment {
         layoutWeeklyView.setVisibility(tabIndex == 1 ? View.VISIBLE : View.GONE);
         layoutDailyView.setVisibility(tabIndex == 2 ? View.VISIBLE : View.GONE);
 
-        if (currentSummary != null) {
+        if (showOnces) {
+            updateActivityListForCurrentFilter();
+        } else if (currentSummary != null) {
             renderSummaryUI(currentSummary);
         }
     }
@@ -268,20 +400,20 @@ public class TrackProgressFragment extends Fragment {
             HapticHelper.performTabSwitch(v);
             monthOffset--;
             selectedDayOfMonth = -1;
-            loadProgressData();
+            updateActivityListForCurrentFilter();
         });
         root.findViewById(R.id.btn_next_month).setOnClickListener(v -> {
             HapticHelper.performTabSwitch(v);
             monthOffset++;
             selectedDayOfMonth = -1;
-            loadProgressData();
+            updateActivityListForCurrentFilter();
         });
         View btnTodayMonth = root.findViewById(R.id.btn_today_month_jump);
         if (btnTodayMonth != null) {
             btnTodayMonth.setOnClickListener(v -> {
                 HapticHelper.performTabSwitch(v);
                 monthOffset = 0;
-                loadProgressData();
+                updateActivityListForCurrentFilter();
             });
         }
 
@@ -291,7 +423,7 @@ public class TrackProgressFragment extends Fragment {
             btnPrevWeek.setOnClickListener(v -> {
                 HapticHelper.performTabSwitch(v);
                 weekOffset--;
-                loadProgressData();
+                updateActivityListForCurrentFilter();
             });
         }
         View btnNextWeek = root.findViewById(R.id.btn_next_week);
@@ -299,7 +431,7 @@ public class TrackProgressFragment extends Fragment {
             btnNextWeek.setOnClickListener(v -> {
                 HapticHelper.performTabSwitch(v);
                 weekOffset++;
-                loadProgressData();
+                updateActivityListForCurrentFilter();
             });
         }
         View btnTodayWeek = root.findViewById(R.id.btn_today_week_jump);
@@ -307,7 +439,7 @@ public class TrackProgressFragment extends Fragment {
             btnTodayWeek.setOnClickListener(v -> {
                 HapticHelper.performTabSwitch(v);
                 weekOffset = 0;
-                loadProgressData();
+                updateActivityListForCurrentFilter();
             });
         }
     }
@@ -326,7 +458,7 @@ public class TrackProgressFragment extends Fragment {
             });
         });
 
-        repository.calculateAllActivitiesMatrix(monthOffset, matrix -> {
+        repository.calculateAllActivitiesMatrix(monthOffset, showOnces, matrix -> {
             if (getActivity() == null) return;
             getActivity().runOnUiThread(() -> {
                 renderAllActivitiesMatrix(matrix);
@@ -521,7 +653,12 @@ public class TrackProgressFragment extends Fragment {
         tvDailyDetailPercent.setText(pctInt + "%");
         pbDailyDetailBar.setProgress(Math.min(100, pctInt));
 
-        if (day.isFuture) {
+        if (day.isPaused || day.status == ProgressDayData.Status.PAUSED) {
+            tvDailyDetailBadge.setText(R.string.status_paused_label);
+            tvDailyDetailBadge.setTextColor(Color.parseColor("#FFD60A"));
+            pbDailyDetailBar.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#FFD60A")));
+            tvDailyDetailNote.setText(getString(R.string.status_paused_label));
+        } else if (day.isFuture) {
             tvDailyDetailBadge.setText(R.string.status_upcoming);
             tvDailyDetailBadge.setTextColor(Color.parseColor("#8E8E93"));
             pbDailyDetailBar.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#393945")));
@@ -587,7 +724,12 @@ public class TrackProgressFragment extends Fragment {
         tvDetailPercentText.setText(pctInt + "%");
         pbDetailProgress.setProgress(Math.min(100, pctInt));
 
-        if (day.isFuture) {
+        if (day.isPaused || day.status == ProgressDayData.Status.PAUSED) {
+            tvDetailDayStatusBadge.setText(R.string.status_paused_label);
+            tvDetailDayStatusBadge.setTextColor(Color.parseColor("#FFD60A"));
+            pbDetailProgress.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#FFD60A")));
+            tvDetailMotivationalNote.setText(getString(R.string.status_paused_label));
+        } else if (day.isFuture) {
             tvDetailDayStatusBadge.setText(R.string.status_upcoming);
             tvDetailDayStatusBadge.setTextColor(Color.parseColor("#8E8E93"));
             pbDetailProgress.setProgressTintList(ColorStateList.valueOf(Color.parseColor("#393945")));
@@ -867,6 +1009,25 @@ public class TrackProgressFragment extends Fragment {
                     fl.addView(tvInside);
                 }
 
+                // Enable clicking on day circle to mark as DONE
+                final Activity activityForCell = row.activity;
+                final int dayForCell = cell.dayOfMonth;
+                final boolean isFutureDay = (cell.status == -1);
+
+                fl.setClickable(true);
+                fl.setFocusable(true);
+                fl.setContentDescription(activityForCell.getName() + " Day " + dayForCell);
+                fl.setOnClickListener(v -> {
+                    if (isFutureDay) {
+                        HapticHelper.vibrateStop(getContext());
+                        Toast.makeText(getContext(), R.string.no_history_yet, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    HapticHelper.performClick(v);
+                    HapticHelper.vibrateStart(getContext());
+                    showMarkDoneDialog(activityForCell, dayForCell);
+                });
+
                 rightRow.addView(fl);
             }
             layoutMatrixRightGrid.addView(rightRow);
@@ -899,5 +1060,115 @@ public class TrackProgressFragment extends Fragment {
     private int dpToPx(float dp) {
         if (getContext() == null) return Math.round(dp);
         return Math.round(dp * getContext().getResources().getDisplayMetrics().density);
+    }
+
+    private void showMarkDoneDialog(Activity activity, int dayOfMonth) {
+        if (getContext() == null || activity == null) return;
+
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        cal.add(Calendar.MONTH, monthOffset);
+        cal.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+        SimpleDateFormat sdfDate = new SimpleDateFormat("EEE, d MMM", Locale.getDefault());
+        String formattedDate = sdfDate.format(cal.getTime());
+
+        float targetHours = activity.getExpectedHoursPerDay();
+        String targetFormatted = (targetHours > 0) ?
+                String.format(Locale.getDefault(), "%.1fh", targetHours) : "1h";
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_mark_activity_done, null);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.Theme_LifeFlow_Dialog)
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        }
+
+        View viewDot = dialogView.findViewById(R.id.view_activity_dot);
+        TextView tvName = dialogView.findViewById(R.id.tv_activity_name);
+        TextView tvDetails = dialogView.findViewById(R.id.tv_activity_details);
+        View btnNo = dialogView.findViewById(R.id.btn_dialog_no);
+        View btnDone = dialogView.findViewById(R.id.btn_dialog_done);
+        View btnPause = dialogView.findViewById(R.id.btn_dialog_pause);
+        View btnUndone = dialogView.findViewById(R.id.btn_dialog_undone);
+
+        int actColor;
+        try {
+            actColor = Color.parseColor(activity.getColorHex());
+        } catch (Exception e) {
+            actColor = Color.parseColor("#30D158");
+        }
+
+        if (viewDot != null) {
+            GradientDrawable dotDrawable = new GradientDrawable();
+            dotDrawable.setShape(GradientDrawable.OVAL);
+            dotDrawable.setColor(actColor);
+            viewDot.setBackground(dotDrawable);
+        }
+
+        if (tvName != null) {
+            tvName.setText(activity.getName());
+            tvName.setTextColor(actColor);
+        }
+
+        if (tvDetails != null) {
+            tvDetails.setText(getString(R.string.daily_target_label) + ": " + targetFormatted + " • " + formattedDate);
+        }
+
+        if (btnNo != null) {
+            btnNo.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        if (btnPause != null) {
+            btnPause.setOnClickListener(v -> {
+                dialog.dismiss();
+                HapticHelper.vibrateSuccess(getContext());
+                repository.markActivityPausedForDay(activity.getId(), monthOffset, dayOfMonth, () -> {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            loadProgressData();
+                            String toastMsg = getString(R.string.matrix_toast_marked_paused, activity.getName(), formattedDate);
+                            Toast.makeText(getContext(), toastMsg, Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            });
+        }
+
+        if (btnDone != null) {
+            btnDone.setOnClickListener(v -> {
+                dialog.dismiss();
+                HapticHelper.vibrateSuccess(getContext());
+                repository.markActivityDoneForDay(activity.getId(), monthOffset, dayOfMonth, () -> {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            loadProgressData();
+                            String toastMsg = getString(R.string.matrix_toast_marked_done, activity.getName(), formattedDate);
+                            Toast.makeText(getContext(), toastMsg, Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            });
+        }
+
+        if (btnUndone != null) {
+            btnUndone.setOnClickListener(v -> {
+                dialog.dismiss();
+                HapticHelper.performClick(v);
+                repository.markActivityUndoneForDay(activity.getId(), monthOffset, dayOfMonth, () -> {
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            loadProgressData();
+                            String toastMsg = getString(R.string.matrix_toast_marked_undone, activity.getName(), formattedDate);
+                            Toast.makeText(getContext(), toastMsg, Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            });
+        }
+
+        dialog.show();
     }
 }

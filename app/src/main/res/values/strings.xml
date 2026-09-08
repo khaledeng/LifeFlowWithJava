@@ -119,6 +119,15 @@
     <!-- Export & Import JSON Strings -->
     <string name="backup_section_title">JSON Backup &amp; Restore</string>
     <string name="backup_section_desc">Export your activities and history as a JSON file or import a backup.</string>
+    <string name="auto_backup_switch_title">Auto Daily Backup (12:00 AM)</string>
+    <string name="auto_backup_switch_desc">Automatically save a full encrypted backup to device storage every midnight.</string>
+    <string name="btn_view_auto_backups">Restore from Auto-Backups</string>
+    <string name="auto_backup_history_dialog_title">Saved Auto-Backups</string>
+    <string name="auto_backup_no_backups">No automatic backups available yet. They will appear here after midnight or after taking a backup.</string>
+    <string name="auto_backup_enabled_toast">Auto Daily Backup enabled (Runs at 12:00 AM)</string>
+    <string name="auto_backup_disabled_toast">Auto Daily Backup disabled</string>
+    <string name="auto_backup_now_btn">Backup Now</string>
+    <string name="auto_backup_now_success">Instant backup saved to device successfully.</string>
     <string name="btn_export_json">Export JSON Backup</string>
     <string name="btn_import_json">Import JSON File</string>
     <string name="btn_paste_json">Paste JSON Text</string>
@@ -353,6 +362,8 @@
     <string name="smart_tracking_default_time">Default Time:</string>
     <string name="smart_tracking_time_from" formatted="false">From: %s</string>
     <string name="smart_tracking_time_to" formatted="false">To: %s</string>
+    <string name="smart_tracking_add_time_slot">+ Add Another Time Slot</string>
+    <string name="smart_tracking_delete_time_slot">Delete time slot</string>
     <string name="smart_tracking_link_app">Link App</string>
     <string name="smart_tracking_no_app_selected">No app selected</string>
     <string name="smart_tracking_bound_to_format" formatted="false">Linked to: %s</string>
@@ -389,4 +400,40 @@
     <string name="banner_permission_overlay_desc">Tap here to allow LifeFlow to immediately block and lock restricted apps.</string>
     <string name="banner_permission_notif_title">⚠️ Notifications Permission Required</string>
     <string name="banner_permission_notif_desc">Tap here to enable notifications for seamless background tracking.</string>
+
+    <!-- Month Matrix Widget Strings -->
+    <string name="widget_month_matrix_title">Month Achievement Matrix</string>
+    <string name="widget_month_matrix_description">View your monthly habit consistency and achievement matrix directly on your home screen.</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_open_app">Open LifeFlow</string>
+    <string name="widget_no_activities">No activities yet. Tap to start tracking!</string>
+    <string name="widget_today_badge" formatted="false">%1$d/%2$d Today</string>
+    <string name="widget_legend_completed">Completed</string>
+    <string name="widget_legend_partial">Partial</string>
+    <string name="widget_legend_exceeded">Exceeded</string>
+    <string name="widget_legend_today">Today</string>
+    <string name="widget_mode_14days">14 Days ▾</string>
+    <string name="widget_mode_month">Month ▾</string>
+    <string name="widget_prev_month">Previous Month</string>
+    <string name="widget_next_month">Next Month</string>
+    <string name="widget_prev_days">Previous Days</string>
+    <string name="widget_next_days">Next Days</string>
+    <string name="widget_days_range" formatted="false">Days: %1$d - %2$d</string>
+    <string name="widget_view_7days_label">7-Day View</string>
+    <string name="matrix_dialog_mark_done_title">Mark as Done?</string>
+    <string name="matrix_dialog_mark_done_msg">Set \"%1$s\" on %2$s to completed (100%% of daily target)?</string>
+    <string name="matrix_dialog_action_done">Make Done</string>
+    <string name="matrix_dialog_action_no">No</string>
+    <string name="matrix_toast_marked_done">\"%1$s\" marked as done (%2$s) ✓</string>
+    <string name="matrix_toast_marked_undone">\"%1$s\" marked as undone (%2$s) ✕</string>
+    <string name="matrix_toast_marked_paused">\"%1$s\" paused for (%2$s) ⏸ (Streak preserved)</string>
+    <string name="widget_btn_make_done">✓ Done</string>
+    <string name="widget_btn_make_undone">✕ Undone</string>
+    <string name="widget_btn_make_pause">⏸ Pause</string>
+    <string name="dialog_btn_pause">⏸ Pause (Rest Day)</string>
+    <string name="dialog_btn_done">✓ Mark Done</string>
+    <string name="dialog_btn_undone">✕ Mark Undone</string>
+    <string name="status_paused_label">Paused (Rest Day) • Streak Preserved ⏸</string>
+    <string name="widget_legend_paused">Paused</string>
+    <string name="widget_act_header">Activity</string>
 </resources>

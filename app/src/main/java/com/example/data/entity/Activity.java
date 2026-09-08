@@ -18,6 +18,8 @@ public class Activity {
     public String iconName = "ic_work";
     public boolean isDefault = false;
     public long createdAt = System.currentTimeMillis();
+    public boolean isOnce = false;
+    public String onceDate = null; // Format: yyyy-MM-dd
 
     public Activity() {
     }
@@ -131,5 +133,21 @@ public class Activity {
 
     public void setCreatedAt(long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isOnce() {
+        return isOnce;
+    }
+
+    public void setOnce(boolean once) {
+        isOnce = once;
+    }
+
+    public String getOnceDate() {
+        return onceDate;
+    }
+
+    public void setOnceDate(String onceDate) {
+        this.onceDate = onceDate;
     }
 }

@@ -85,7 +85,14 @@ public class ActivityManageAdapter extends RecyclerView.Adapter<ActivityManageAd
                 categoryStr = "↓ " + context.getString(com.example.R.string.goal_decrease);
             }
 
-            if (activity.getExpectedHoursPerDay() > 0) {
+            if (activity.isOnce()) {
+                String dateStr = activity.getOnceDate() != null ? activity.getOnceDate() : "";
+                if (activity.getExpectedHoursPerDay() > 0) {
+                    binding.tvManageDetails.setText(String.format(java.util.Locale.US, "⚡ نشاط ليوم واحد (%s) • \u200E%.1fh", dateStr, activity.getExpectedHoursPerDay()));
+                } else {
+                    binding.tvManageDetails.setText(String.format(java.util.Locale.US, "⚡ نشاط ليوم واحد (%s)", dateStr));
+                }
+            } else if (activity.getExpectedHoursPerDay() > 0) {
                 String targetLabel = context.getString(com.example.R.string.target_label_short);
                 String hoursPerDay = context.getString(com.example.R.string.hours_per_day_short);
                 binding.tvManageDetails.setText(String.format(java.util.Locale.US, "%s • %s: \u200E%.1f %s", categoryStr, targetLabel, activity.getExpectedHoursPerDay(), hoursPerDay));

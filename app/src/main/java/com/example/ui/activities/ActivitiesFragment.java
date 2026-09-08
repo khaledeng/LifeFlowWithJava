@@ -32,6 +32,7 @@ import com.example.util.SubscriptionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * ActivitiesFragment enables creating, editing, and managing activity categories.
@@ -185,6 +186,14 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                 activityToEdit != null ? activityToEdit.getCategory() : com.example.data.entity.ActivityCategory.NEUTRAL
         };
 
+        final boolean[] isOnce = {activityToEdit != null && activityToEdit.isOnce()};
+        java.util.Calendar calNow = java.util.Calendar.getInstance();
+        java.text.SimpleDateFormat sdfToday = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        String defaultDate = (activityToEdit != null && activityToEdit.getOnceDate() != null)
+                ? activityToEdit.getOnceDate()
+                : sdfToday.format(calNow.getTime());
+        final String[] selectedOnceDate = {defaultDate};
+
         dialogBinding.btnDialogClose.setOnClickListener(v -> dialog.dismiss());
 
         // Dynamic Preview Helper
@@ -245,6 +254,55 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
             selectedCategory[0] = com.example.data.entity.ActivityCategory.DECREASE;
             updateCategoryUI.run();
         });
+
+        // Activity Frequency Helper (Recurring vs Once Act)
+        Runnable updateFrequencyUI = () -> {
+            boolean once = isOnce[0];
+            dialogBinding.cardTypeRecurring.setBackgroundResource(!once ? R.drawable.bg_goal_card_selected : R.drawable.bg_goal_card_unselected);
+            dialogBinding.tvTypeRecurringLabel.setTextColor(!once ? Color.WHITE : Color.parseColor("#A0A0AA"));
+
+            dialogBinding.cardTypeOnce.setBackgroundResource(once ? R.drawable.bg_goal_card_selected : R.drawable.bg_goal_card_unselected);
+            dialogBinding.tvTypeOnceLabel.setTextColor(once ? Color.WHITE : Color.parseColor("#A0A0AA"));
+
+            dialogBinding.layoutOnceDatePicker.setVisibility(once ? View.VISIBLE : View.GONE);
+            dialogBinding.tvOnceNotice.setVisibility(once ? View.VISIBLE : View.GONE);
+            dialogBinding.tvSelectedOnceDate.setText(selectedOnceDate[0]);
+
+            if (once) {
+                dialogBinding.tvExpectedHoursLabel.setText("الساعات المستهدفة لهذا اليوم (اختياري)");
+            } else {
+                updateCategoryUI.run();
+            }
+        };
+
+        dialogBinding.cardTypeRecurring.setOnClickListener(v -> {
+            isOnce[0] = false;
+            updateFrequencyUI.run();
+        });
+
+        dialogBinding.cardTypeOnce.setOnClickListener(v -> {
+            isOnce[0] = true;
+            updateFrequencyUI.run();
+        });
+
+        dialogBinding.layoutOnceDatePicker.setOnClickListener(v -> {
+            int y = calNow.get(java.util.Calendar.YEAR);
+            int m = calNow.get(java.util.Calendar.MONTH);
+            int d = calNow.get(java.util.Calendar.DAY_OF_MONTH);
+            try {
+                String[] parts = selectedOnceDate[0].split("-");
+                y = Integer.parseInt(parts[0]);
+                m = Integer.parseInt(parts[1]) - 1;
+                d = Integer.parseInt(parts[2]);
+            } catch (Exception ignored) {}
+
+            new android.app.DatePickerDialog(requireContext(), (view, year, monthOfYear, dayOfMonth) -> {
+                selectedOnceDate[0] = String.format(Locale.US, "%04d-%02d-%02d", year, monthOfYear + 1, dayOfMonth);
+                dialogBinding.tvSelectedOnceDate.setText(selectedOnceDate[0]);
+            }, y, m, d).show();
+        });
+
+        updateFrequencyUI.run();
 
         if (activityToEdit != null) {
             dialogBinding.tvDialogTitle.setText(R.string.edit_activity);
@@ -482,15 +540,16 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                 } catch (NumberFormatException ignored) {}
             }
 
-            // Calculate current total daily goals
+            // Calculate current total daily goals for recurring activities
             float currentTotalGoals = 0f;
             for (Activity act : activityList) {
-                if (activityToEdit == null || act.getId() != activityToEdit.getId()) {
+                if (!act.isOnce() && (activityToEdit == null || act.getId() != activityToEdit.getId())) {
                     currentTotalGoals += act.getExpectedHoursPerDay();
                 }
             }
 
-            if (currentTotalGoals + expectedHours > 24f) {
+            // Enforce 24h limit only for recurring activities; once activities are allowed even if 24h is reached
+            if (!isOnce[0] && currentTotalGoals + expectedHours > 24f) {
                 dialogBinding.tilExpectedHours.setError(getString(R.string.goal_exceeds_24h_error));
                 Toast.makeText(requireContext(), getString(R.string.goal_exceeds_24h_error), Toast.LENGTH_LONG).show();
                 return;
@@ -502,6 +561,8 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                 activityToEdit.setExpectedHoursPerDay(expectedHours);
                 activityToEdit.setColorHex(selectedColor[0]);
                 activityToEdit.setIconName(selectedIcon[0]);
+                activityToEdit.setOnce(isOnce[0]);
+                activityToEdit.setOnceDate(isOnce[0] ? selectedOnceDate[0] : null);
                 com.example.util.HapticHelper.vibrateSuccess(getContext());
                 repository.updateActivity(activityToEdit, () -> {
                     requireActivity().runOnUiThread(dialog::dismiss);
@@ -516,6 +577,8 @@ public class ActivitiesFragment extends Fragment implements ActivityManageAdapte
                         false,
                         System.currentTimeMillis()
                 );
+                newActivity.setOnce(isOnce[0]);
+                newActivity.setOnceDate(isOnce[0] ? selectedOnceDate[0] : null);
                 com.example.util.HapticHelper.vibrateSuccess(getContext());
                 repository.insertActivity(newActivity, () -> {
                     requireActivity().runOnUiThread(dialog::dismiss);

@@ -115,28 +115,42 @@ public class TrackingService extends Service {
     }
 
     public static void startTracking(Context context, String activityName) {
-        Intent intent = new Intent(context, TrackingService.class);
-        intent.setAction(ACTION_START);
-        intent.putExtra(EXTRA_ACTIVITY_NAME, activityName);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
+        if (context == null) return;
+        try {
+            Intent intent = new Intent(context, TrackingService.class);
+            intent.setAction(ACTION_START);
+            intent.putExtra(EXTRA_ACTIVITY_NAME, activityName);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (Throwable e) {
+            android.util.Log.e("TrackingService", "Unable to start TrackingService", e);
         }
     }
 
     public static void stopTracking(Context context) {
-        Intent intent = new Intent(context, TrackingService.class);
-        intent.setAction(ACTION_STOP);
-        context.startService(intent);
+        if (context == null) return;
+        try {
+            Intent intent = new Intent(context, TrackingService.class);
+            intent.setAction(ACTION_STOP);
+            context.startService(intent);
+        } catch (Throwable e) {
+            android.util.Log.e("TrackingService", "Unable to stop TrackingService", e);
+        }
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        repository = TrackingRepository.getInstance(this);
-        database = AppDatabase.getDatabase(this);
-        createNotificationChannel();
+        try {
+            repository = TrackingRepository.getInstance(this);
+            database = AppDatabase.getDatabase(this);
+            createNotificationChannel();
+        } catch (Throwable t) {
+            android.util.Log.e("TrackingService", "Error during service onCreate", t);
+        }
     }
 
     @Override
@@ -153,10 +167,35 @@ public class TrackingService extends Service {
             }
             isTracking = true;
             Notification initialNotification = buildNotification(activityName, "Today: 00:00:00 - 0.0% of day");
-            try {
-                startForeground(NOTIFICATION_ID, initialNotification);
-            } catch (Exception e) {
-                android.util.Log.e("TrackingService", "Failed to start foreground service", e);
+            boolean startedForeground = false;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                try {
+                    startForeground(NOTIFICATION_ID, initialNotification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+                    startedForeground = true;
+                } catch (Throwable t) {
+                    android.util.Log.e("TrackingService", "startForeground SPECIAL_USE failed, trying DATA_SYNC", t);
+                }
+            }
+
+            if (!startedForeground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    startForeground(NOTIFICATION_ID, initialNotification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                    startedForeground = true;
+                } catch (Throwable t) {
+                    android.util.Log.e("TrackingService", "startForeground DATA_SYNC failed", t);
+                }
+            }
+
+            if (!startedForeground) {
+                try {
+                    startForeground(NOTIFICATION_ID, initialNotification);
+                    startedForeground = true;
+                } catch (Throwable t) {
+                    android.util.Log.e("TrackingService", "Failed all startForeground attempts", t);
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
             }
 
             tickerHandler.removeCallbacks(tickerRunnable);
@@ -173,12 +212,15 @@ public class TrackingService extends Service {
             checkSmartTracking();
             updateNotificationContent();
         } else if (ACTION_STOP.equals(action)) {
+            boolean wasRunning = isTracking;
             isTracking = false;
             tickerHandler.removeCallbacks(tickerRunnable);
             smartCheckHandler.removeCallbacks(smartCheckRunnable);
-            repository.stopActiveSession(false, () -> {
-                // Done stopping
-            });
+            if (wasRunning) {
+                repository.stopActiveSession(false, () -> {
+                    // Done stopping
+                });
+            }
             try {
                 stopForeground(true);
             } catch (Exception ignored) {}

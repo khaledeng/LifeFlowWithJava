@@ -56,20 +56,22 @@
         android:id="@+id/tv_stat_duration"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="4dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
         android:text="44h 42m"
         android:textColor="#C0C0C5"
-        android:textSize="15sp" />
+        android:textSize="14sp" />
 
     <!-- Percentage -->
     <TextView
         android:id="@+id/tv_stat_percentage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:gravity="end"
+        android:minWidth="42dp"
         android:text="6.0%"
         android:textColor="@color/primary"
-        android:textSize="15sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
 </LinearLayout>

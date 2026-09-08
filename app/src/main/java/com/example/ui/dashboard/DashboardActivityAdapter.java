@@ -171,6 +171,9 @@ public class DashboardActivityAdapter extends RecyclerView.Adapter<DashboardActi
             }
 
             long targetMillis = (long) (targetHours * 3600.0 * 1000.0);
+            if (targetMillis <= 0) {
+                return;
+            }
             int pct = (int) Math.min(100, Math.max(0, (displayMillis * 100) / targetMillis));
 
             // Allow percentage over 100% for display

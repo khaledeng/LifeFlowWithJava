@@ -118,9 +118,16 @@ public class StatsBreakdownAdapter extends RecyclerView.Adapter<StatsBreakdownAd
         void bind(TrackingRepository.ActivityStat stat, boolean isActive, long displayDuration, OnItemEditClickListener listener) {
             binding.tvStatName.setText(stat.name);
             binding.tvStatDuration.setText(IconHelper.formatDurationWithSeconds(displayDuration));
-            binding.tvStatPercentage.setVisibility(View.GONE);
 
             int color = IconHelper.parseColorOrDefault(stat.colorHex, Color.parseColor("#39D353"));
+            binding.tvStatPercentage.setTextColor(color);
+            if (stat.percentage > 0f) {
+                binding.tvStatPercentage.setText(String.format(java.util.Locale.US, "%.1f%%", stat.percentage));
+            } else {
+                binding.tvStatPercentage.setText("0.0%");
+            }
+            binding.tvStatPercentage.setVisibility(View.VISIBLE);
+
             IconHelper.setIcon(binding.ivStatIcon, stat.iconName, color);
 
             int iconBgColor = Color.argb(35, Color.red(color), Color.green(color), Color.blue(color));

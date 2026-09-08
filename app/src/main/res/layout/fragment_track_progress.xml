@@ -372,6 +372,38 @@
 
         </LinearLayout>
 
+        <!-- Activities Header Bar with Show onces / Hide onces Toggle Button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/nav_activities"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_toggle_onces"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_active_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingHorizontal="14dp"
+                android:text="Show onces"
+                android:textColor="#39D353"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         <!-- Activities Horizontal Selector (Placed Below Tabs for Easy Access in Daily, Weekly, and Monthly) -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_activity_selector"
